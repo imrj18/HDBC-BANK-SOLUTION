@@ -1,0 +1,7 @@
+INSERT INTO bank (bank_name, ifsc_code, branch, created_at, updated_at)
+VALUES
+    ('HDBC Bank', 'HDBC0000001', 'Head Office', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('HDBC Bank', 'HDBC0000002', 'Mumbai Branch', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('HDBC Bank', 'HDBC0000003', 'Delhi Branch', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('HDBC Bank', 'HDBC0000004', 'Bangalore Branch', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('HDBC Bank', 'HDBC0000005', 'Pune Branch', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
