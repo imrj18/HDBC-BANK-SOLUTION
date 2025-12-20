@@ -36,12 +36,12 @@ public class BankServiceImpl implements BankService {
     }
 
     @Override
-    public String addBank(BankRequestDTO dto) {
+    public BankResponseDTO addBank(BankRequestDTO dto) {
         log.info("Request received to add bank.");
-//        if(dto.getIfscCode().length() != 11){
-//            log.warn("Bank creation failed. IFSC code invalid: {}", dto.getIfscCode());
-//            throw new BadRequestException("Invalid IFSC Code");
-//        }
+        if(dto.getIfscCode().length() != 11){
+            log.warn("Bank creation failed. IFSC code invalid: {}", dto.getIfscCode());
+            throw new BadRequestException("Invalid IFSC Code");
+        }
         if(repository.findByIfscCode(dto.getIfscCode()).isPresent()){
             log.warn("Bank creation failed. IFSC already exists: {}", dto.getIfscCode());
             throw new BadRequestException("Ifsc code already exists.");
@@ -54,13 +54,13 @@ public class BankServiceImpl implements BankService {
         Bank bank = new Bank(dto.getBankName(), dto.getIfscCode(), dto.getBranch());
         repository.save(bank);
         log.info("Bank created successfully with IFSC: {}", dto.getIfscCode());
-        return "Bank Added Successfully.";
+        return mapToDTO(bank);
     }
 
     @Override
-    public List<BankResponseDTO> getBankDetails(String ifsc, Long id) {
-        log.info("Fetching bank details. IFSC: {}, ID: {}", ifsc, id);
-        if (ifsc != null && id != null) {
+    public List<BankResponseDTO> getBankDetails(String ifsc, Long bank_id) {
+        log.info("Fetching bank details. IFSC: {}, ID: {}", ifsc, bank_id);
+        if (ifsc != null && bank_id != null) {
             log.warn("Invalid request: Both IFSC and ID provided");
             throw new BadRequestException("Please provide either IFSC or ID, not both");
         }
@@ -74,12 +74,12 @@ public class BankServiceImpl implements BankService {
             return List.of(mapToDTO(bank));
         }
 
-        if (id != null) {
-            Bank bank = repository.findById(id).orElseThrow(() -> {
-                log.warn("Bank not found for ID: {}", id);
-                return  new ResourceNotFoundException("Bank not found with id " + id);
+        if (bank_id != null) {
+            Bank bank = repository.findById(bank_id).orElseThrow(() -> {
+                log.warn("Bank not found for ID: {}", bank_id);
+                return  new ResourceNotFoundException("Bank not found with id " + bank_id);
             });
-            log.info("Bank found for ID: {}", id);
+            log.info("Bank found for ID: {}", bank_id);
             return List.of(mapToDTO(bank));
         }
 

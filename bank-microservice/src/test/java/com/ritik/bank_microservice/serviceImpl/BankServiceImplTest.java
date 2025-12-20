@@ -51,11 +51,14 @@ class BankServiceImplTest {
                 .thenReturn(savedEntity);
 
         // Act
-        String actual = service.addBank(createDTO());
+        BankResponseDTO actual = service.addBank(createDTO());
 
 
         //Assert
-        Assertions.assertEquals("Bank Added Successfully.",actual);
+        Assertions.assertEquals(1L,actual.getBankId());
+        Assertions.assertEquals("HDFC Bank", actual.getBankName());
+        Assertions.assertEquals("HDBC0000001", actual.getIfscCode());
+        Assertions.assertEquals("Bhilai", actual.getBranch());
 
         Mockito.verify(repository, Mockito.times(1))
                 .save(Mockito.any(Bank.class));
@@ -69,7 +72,7 @@ class BankServiceImplTest {
         BankRequestDTO dto = new BankRequestDTO();
         dto.setBranch("Bhilai");
         dto.setBankName("HDBC Bank");
-        dto.setIfscCode("HDBC000001");
+        dto.setIfscCode("HDBC00001");
         //Act & Assert
         BadRequestException exception = Assertions.assertThrows(BadRequestException.class,
                 ()->service.addBank(dto));

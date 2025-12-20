@@ -8,7 +8,7 @@ import java.util.List;
 
 public interface BankService {
 
-    String addBank(BankRequestDTO dto);
+    BankResponseDTO addBank(BankRequestDTO dto);
 
     //List<Bank> getAllBank();
 

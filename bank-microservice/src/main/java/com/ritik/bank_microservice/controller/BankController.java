@@ -24,17 +24,16 @@ public class BankController {
     }
 
     //Register Bank
-    @PostMapping
-    public ResponseEntity<String> addBank(@Valid @RequestBody BankRequestDTO dto) {
-        log.info("API call: POST /api/banks");
+    @PostMapping("/register")
+    public ResponseEntity<BankResponseDTO> addBank(@Valid @RequestBody BankRequestDTO dto) {
+        log.info("API call: POST /api/banks/register");
         return ResponseEntity.status(HttpStatus.CREATED).body(service.addBank(dto));
     }
 
     @GetMapping
     public ResponseEntity<List<BankResponseDTO>> getBanks(@RequestParam(required = false) String ifsc,
-                                                          @RequestParam(required = false) Long id) {
-        log.info("API call: POST /api/banks/getBanks");
-        return ResponseEntity.ok(service.getBankDetails(ifsc, id));
+                                                          @RequestParam(required = false) Long bank_id) {
+        log.info("API call: GET /api/banks");
+        return ResponseEntity.ok(service.getBankDetails(ifsc, bank_id));
     }
-
 }
