@@ -8,8 +8,6 @@ import lombok.Setter;
 @Setter
 public class CustomerRegisterDTO {
 
-    @NotNull(message = "BankId is required")
-    private Long bankId;
 
     @NotBlank(message = "Name is required")
     @Size(min = 2, max = 100, message = "Name must be between 2 and 100 characters")
@@ -22,6 +20,10 @@ public class CustomerRegisterDTO {
     @NotBlank(message = "Phone is required")
     @Pattern(regexp = "^[6-9]\\d{9}$", message = "Invalid Indian phone number")
     private String phone;
+
+    @NotBlank(message = "Address is required")
+    @Size(min = 10, max = 100, message = "Address must be between 10 and 100 characters")
+    private String address;
 
     @NotBlank(message = "Aadhar is required")
     @Pattern(regexp = "^\\d{12}$", message = "Aadhar must be 12 digits")

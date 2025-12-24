@@ -1,5 +1,6 @@
 package com.ritik.customer_microservice.model;
 
+import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -7,21 +8,13 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.List;
 
+@Getter
 public class CustomerPrincipal implements UserDetails {
 
     private Customer customer;
-    private Long bankId;
 
-    public CustomerPrincipal(Customer customer, Long bankId) {
+    public CustomerPrincipal(Customer customer) {
         this.customer=customer;
-        this.bankId=bankId;
-    }
-
-    public Long getBankId(){
-        return bankId;
-    }
-    public Customer getCustomer() {
-        return customer;
     }
 
     @Override

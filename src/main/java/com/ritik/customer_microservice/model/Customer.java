@@ -1,6 +1,6 @@
 package com.ritik.customer_microservice.model;
 
-import com.ritik.customer_microservice.enums.BankStatus;
+import com.ritik.customer_microservice.enums.CustomerStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -11,7 +11,13 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "customers")
+@Table(
+        name = "customers",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"email"}),
+                @UniqueConstraint(columnNames = {"aadhar"})
+        }
+)
 @Getter
 @Setter
 @AllArgsConstructor
@@ -25,21 +31,21 @@ public class Customer {
     @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(nullable = false, length = 150)
+    @Column(nullable = false, length = 150, unique = true)
     private String email;
 
-    @Column(nullable = false, length = 15)
+    @Column(nullable = false, length = 15, unique = true)
     private String phone;
 
-    @Column(nullable = false, length = 12)
+    @Column(nullable = false, length = 250)
+    private String address;
+
+    @Column(nullable = false, length = 12, unique = true)
     private String aadhar;
 
-    @Column(name = "bank_id", nullable = false)
-    private Long bankId;
-
     @Enumerated(EnumType.STRING)
-    @Column(name = "bank_status", nullable = false)
-    private BankStatus bankStatus;
+    @Column(name = "customer_status", nullable = false)
+    private CustomerStatus customerStatus;
 
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;

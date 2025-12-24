@@ -8,13 +8,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
-import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
-import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.function.Function;
 
 @Service
@@ -33,11 +28,10 @@ public class JwtServiceImpl {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public String generateToken(Long bankId,String email){
-        Map<String, Object> claims = new HashMap<>();
+    public String generateToken(String email){
+        //Map<String, Object> claims = new HashMap<>();
         return Jwts.builder()
                 .subject(email)
-                .claim("bankId", bankId)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + 3 * 60 * 1000))
                 .signWith(getKey())
@@ -48,11 +42,6 @@ public class JwtServiceImpl {
     public String extractEmail(String token) {
         return extractClaim(token, Claims::getSubject);
     }
-
-    public Long extractBankId(String token){
-        return extractClaim(token,claims -> claims.get("bankId", Long.class));
-    }
-
 
     private <T> T extractClaim(String token, Function<Claims, T> claimResolver) {
         final Claims claims = extractAllClaims(token);

@@ -9,11 +9,11 @@ import java.time.LocalDateTime;
 @Setter
 public class CustomerResponseDTO {
     private String customerId;
-    private Long bankId;
 
     private String name;
     private String email;
     private String phone;
+    private String address;
     private String aadhar;
 
     private String bankStatus;

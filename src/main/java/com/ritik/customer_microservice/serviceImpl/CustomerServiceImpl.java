@@ -3,30 +3,27 @@ package com.ritik.customer_microservice.serviceImpl;
 import com.ritik.customer_microservice.dto.CustomerLoginDTO;
 import com.ritik.customer_microservice.dto.CustomerRegisterDTO;
 import com.ritik.customer_microservice.dto.CustomerResponseDTO;
-import com.ritik.customer_microservice.enums.BankStatus;
+import com.ritik.customer_microservice.dto.CustomerUpdateDTO;
+import com.ritik.customer_microservice.enums.CustomerStatus;
 import com.ritik.customer_microservice.exception.CustomerAlreadyExistsException;
 import com.ritik.customer_microservice.exception.CustomerNotFoundException;
+import com.ritik.customer_microservice.exception.WrongPasswordException;
 import com.ritik.customer_microservice.model.Customer;
 import com.ritik.customer_microservice.repository.CustomerRepository;
 import com.ritik.customer_microservice.service.CustomerService;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-@Slf4j
+import java.util.Optional;
+
 @Service
 public class CustomerServiceImpl implements CustomerService {
 
-    private CustomerRepository customerRepository;
+    private final CustomerRepository customerRepository;
 
-    private PasswordEncoder passwordEncoder;
+    private final PasswordEncoder passwordEncoder;
 
-    private JwtServiceImpl jwtService;
+    private final JwtServiceImpl jwtService;
 
     public CustomerServiceImpl(CustomerRepository repository, PasswordEncoder passwordEncoder,
                                JwtServiceImpl jwtService) {
@@ -41,69 +38,88 @@ public class CustomerServiceImpl implements CustomerService {
         CustomerResponseDTO dto = new CustomerResponseDTO();
 
         dto.setCustomerId(customer.getCustomerId().toString());
-        dto.setBankId(customer.getBankId());
 
         dto.setName(customer.getName());
         dto.setEmail(customer.getEmail());
         dto.setPhone(customer.getPhone());
+        dto.setAddress(customer.getAddress());
         dto.setAadhar(customer.getAadhar());
 
-        dto.setBankStatus(customer.getBankStatus().name());
+        dto.setBankStatus(customer.getCustomerStatus().name());
         dto.setCreatedAt(customer.getCreatedAt());
         dto.setUpdatedAt(customer.getUpdatedAt());
 
         return dto;
     }
 
-    private static Customer toEntity(
-            CustomerRegisterDTO dto,
-            PasswordEncoder passwordEncoder
-    ) {
+    private static Customer toEntity(CustomerRegisterDTO dto, PasswordEncoder passwordEncoder) {
         Customer customer = new Customer();
 
-        customer.setBankId(dto.getBankId());
         customer.setName(dto.getName());
         customer.setEmail(dto.getEmail());
         customer.setPhone(dto.getPhone());
+        customer.setAddress(dto.getAddress());
         customer.setAadhar(dto.getAadhar());
 
         customer.setPasswordHash(
                 passwordEncoder.encode(dto.getPassword())
         );
 
-        customer.setBankStatus(BankStatus.ACTIVE);
+        customer.setCustomerStatus(CustomerStatus.ACTIVE);
 
         return customer;
     }
 
+    @Override
     public CustomerResponseDTO register(CustomerRegisterDTO registerDTO) {
 
-        if (customerRepository.existsByEmailAndBankId(
-                registerDTO.getEmail(), registerDTO.getBankId())) {
+        if (customerRepository.existsByEmail(registerDTO.getEmail())) {
+            throw new CustomerAlreadyExistsException("Email already exists");
+        }
 
-            throw new CustomerAlreadyExistsException("Customer already exists");
+        if (customerRepository.existsByAadhar(registerDTO.getAadhar())) {
+            throw new CustomerAlreadyExistsException("Aadhaar already exists");
+        }
+
+        if (customerRepository.existsByPhone(registerDTO.getPhone())) {
+            throw new CustomerAlreadyExistsException("Phone already exists");
         }
 
         Customer customer = toEntity(registerDTO, passwordEncoder);
-        Customer savedCustomer = customerRepository.save(customer);
 
+
+        Customer savedCustomer = customerRepository.save(customer);
         return toResponseDto(savedCustomer);
     }
 
-
+    @Override
     public String verify(CustomerLoginDTO dto) {
 
-        log.info("Inside verify service logic");
-
-        Customer customer = customerRepository
-                .findByEmailAndBankId(dto.getEmail(), dto.getBankId())
-                .orElseThrow(() -> new BadCredentialsException("Invalid bank or email"));
+        Customer customer = customerRepository.findByEmail(dto.getEmail())
+                .orElseThrow(() -> new CustomerNotFoundException("Customer not found!!! Invalid email"));
 
         if (!passwordEncoder.matches(dto.getPassword(), customer.getPasswordHash())) {
-            throw new BadCredentialsException("Invalid password");
+            throw new WrongPasswordException ("Wrong password");
         }
 
-        return jwtService.generateToken(dto.getBankId(), dto.getEmail());
+        return jwtService.generateToken(dto.getEmail());
     }
 
+    @Override
+    public CustomerResponseDTO viewProfile(String email){
+        Customer customer = customerRepository.findByEmail(email).orElseThrow(()->
+                new CustomerNotFoundException("Customer not found."));
+        return toResponseDto(customer);
+    }
+
+    @Override
+    public CustomerResponseDTO updateProfile(String email,CustomerUpdateDTO updateDTO) {
+        Customer customer = customerRepository.findByEmail(email).orElseThrow(()->
+                new CustomerNotFoundException("Customer not found."));
+        customer.setName(updateDTO.getName());
+        customer.setPhone(updateDTO.getPhone());
+        customer.setAddress(updateDTO.getAddress());
+        customerRepository.save(customer);
+        return toResponseDto(customer);
+    }
 }

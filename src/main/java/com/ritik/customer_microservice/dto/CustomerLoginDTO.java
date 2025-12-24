@@ -11,9 +11,6 @@ import lombok.Setter;
 @Setter
 public class CustomerLoginDTO {
 
-    @NotNull(message = "BankId is required")
-    private Long bankId;
-
     @NotBlank(message = "Email is required")
     @Email(message = "Invalid email format")
     private String email;
