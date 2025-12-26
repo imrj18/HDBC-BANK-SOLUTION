@@ -1,5 +1,6 @@
 package com.ritik.customer_microservice.model;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -9,13 +10,10 @@ import java.util.Collection;
 import java.util.List;
 
 @Getter
+@AllArgsConstructor
 public class CustomerPrincipal implements UserDetails {
 
     private Customer customer;
-
-    public CustomerPrincipal(Customer customer) {
-        this.customer=customer;
-    }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

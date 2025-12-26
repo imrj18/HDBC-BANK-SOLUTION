@@ -5,10 +5,9 @@ import com.ritik.customer_microservice.dto.CustomerRegisterDTO;
 import com.ritik.customer_microservice.dto.CustomerResponseDTO;
 import com.ritik.customer_microservice.dto.CustomerUpdateDTO;
 import com.ritik.customer_microservice.model.CustomerPrincipal;
-import com.ritik.customer_microservice.serviceImpl.CustomerServiceImpl;
+import com.ritik.customer_microservice.service.CustomerService;
 import jakarta.validation.Valid;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -16,19 +15,10 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/customers")
+@RequiredArgsConstructor
 public class CustomerController {
 
-    private final CustomerServiceImpl service;
-
-    public CustomerController(CustomerServiceImpl service) {
-        this.service = service;
-    }
-
-    @GetMapping
-    public String greet(){
-
-        return "Hello World";
-    }
+    private final CustomerService service;
 
     @PostMapping("/auth/login")
     public ResponseEntity<String> login(@Valid @RequestBody CustomerLoginDTO loginDTO){

@@ -4,19 +4,19 @@ import com.ritik.customer_microservice.dto.CustomerLoginDTO;
 import com.ritik.customer_microservice.dto.CustomerRegisterDTO;
 import com.ritik.customer_microservice.dto.CustomerResponseDTO;
 import com.ritik.customer_microservice.dto.CustomerUpdateDTO;
-import com.ritik.customer_microservice.enums.CustomerStatus;
+import com.ritik.customer_microservice.enums.Status;
 import com.ritik.customer_microservice.exception.CustomerAlreadyExistsException;
 import com.ritik.customer_microservice.exception.CustomerNotFoundException;
 import com.ritik.customer_microservice.exception.WrongPasswordException;
 import com.ritik.customer_microservice.model.Customer;
 import com.ritik.customer_microservice.repository.CustomerRepository;
 import com.ritik.customer_microservice.service.CustomerService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
-
 @Service
+@RequiredArgsConstructor
 public class CustomerServiceImpl implements CustomerService {
 
     private final CustomerRepository customerRepository;
@@ -24,14 +24,6 @@ public class CustomerServiceImpl implements CustomerService {
     private final PasswordEncoder passwordEncoder;
 
     private final JwtServiceImpl jwtService;
-
-    public CustomerServiceImpl(CustomerRepository repository, PasswordEncoder passwordEncoder,
-                               JwtServiceImpl jwtService) {
-
-        this.customerRepository = repository;
-        this.jwtService = jwtService;
-        this.passwordEncoder = passwordEncoder;
-    }
 
     private static CustomerResponseDTO toResponseDto(Customer customer) {
 
@@ -45,7 +37,7 @@ public class CustomerServiceImpl implements CustomerService {
         dto.setAddress(customer.getAddress());
         dto.setAadhar(customer.getAadhar());
 
-        dto.setBankStatus(customer.getCustomerStatus().name());
+        dto.setBankStatus(customer.getStatus().name());
         dto.setCreatedAt(customer.getCreatedAt());
         dto.setUpdatedAt(customer.getUpdatedAt());
 
@@ -65,7 +57,7 @@ public class CustomerServiceImpl implements CustomerService {
                 passwordEncoder.encode(dto.getPassword())
         );
 
-        customer.setCustomerStatus(CustomerStatus.ACTIVE);
+        customer.setStatus(Status.ACTIVE);
 
         return customer;
     }

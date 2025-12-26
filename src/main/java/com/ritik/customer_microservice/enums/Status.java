@@ -1,6 +1,6 @@
 package com.ritik.customer_microservice.enums;
 
-public enum CustomerStatus {
+public enum Status {
     ACTIVE,
     INACTIVE,
     BLOCKED

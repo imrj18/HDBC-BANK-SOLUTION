@@ -1,6 +1,6 @@
 package com.ritik.customer_microservice.model;
 
-import com.ritik.customer_microservice.enums.CustomerStatus;
+import com.ritik.customer_microservice.enums.Status;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -45,7 +45,7 @@ public class Customer {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "customer_status", nullable = false)
-    private CustomerStatus customerStatus;
+    private Status status;
 
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;

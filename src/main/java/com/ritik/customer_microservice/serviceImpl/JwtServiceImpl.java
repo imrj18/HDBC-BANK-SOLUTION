@@ -33,7 +33,7 @@ public class JwtServiceImpl {
         return Jwts.builder()
                 .subject(email)
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + 3 * 60 * 1000))
+                .expiration(new Date(System.currentTimeMillis() + 10 * 60 * 1000))
                 .signWith(getKey())
                 .compact();
 
