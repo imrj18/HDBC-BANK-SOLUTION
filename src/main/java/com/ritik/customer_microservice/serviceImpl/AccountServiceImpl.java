@@ -2,6 +2,7 @@ package com.ritik.customer_microservice.serviceImpl;
 
 import com.ritik.customer_microservice.dto.*;
 import com.ritik.customer_microservice.enums.Status;
+import com.ritik.customer_microservice.exception.AccountAccessDeniedException;
 import com.ritik.customer_microservice.exception.AccountNotFoundException;
 import com.ritik.customer_microservice.exception.CustomerNotFoundException;
 import com.ritik.customer_microservice.model.Account;
@@ -9,9 +10,12 @@ import com.ritik.customer_microservice.model.Customer;
 import com.ritik.customer_microservice.repository.AccountRepository;
 import com.ritik.customer_microservice.repository.CustomerRepository;
 import com.ritik.customer_microservice.service.AccountService;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -24,7 +28,7 @@ public class AccountServiceImpl implements AccountService {
 
     private final PasswordEncoder passwordEncoder;
 
-    private final GenerateAccountNumber accountNumber;
+    private final GenerateAccountNumber accountNumberGenerator;
 
     private AccountResponseDTO toResponseDto(Account account) {
 
@@ -42,38 +46,41 @@ public class AccountServiceImpl implements AccountService {
         return dto;
     }
 
-    private static Account toEntity(CreateAccountDTO dto, PasswordEncoder passwordEncoder) {
+    private Account toEntity(CreateAccountDTO dto) {
         Account account = new Account();
 
         account.setAccountType(dto.getAccountType());
         account.setBankId(dto.getBankId());
         account.setPinHash(passwordEncoder.encode(dto.getPin()));
-
         account.setAccountStatus(Status.ACTIVE);
+        account.setAmount(BigDecimal.ZERO);
 
         return account;
     }
 
+    @Override
+    @Transactional
     public AccountResponseDTO createAccount(String email, CreateAccountDTO createAccountDTO){
         Customer customer = customerRepository.findByEmail(email).orElseThrow(()->
                 new CustomerNotFoundException("Customer not found"));
 
-        Account account = toEntity(createAccountDTO, passwordEncoder);
+        Account account = toEntity(createAccountDTO);
 
         account.setCustomerId(customer.getCustomerId());
 
-        account.setAccountNum(accountNumber.generate(createAccountDTO.getBankId()));
+        account.setAccountNum(accountNumberGenerator.generate(createAccountDTO.getBankId()));
 
         accountRepository.save(account);
 
         return toResponseDto(account);
     }
 
+    @Override
     public AccountBalanceDTO checkBalance(String email, Long accountNum){
         Customer customer = customerRepository.findByEmail(email).orElseThrow(()->
                 new CustomerNotFoundException("Customer not found"));
         Account account = accountRepository.findByAccountNumAndCustomerId(accountNum,customer.getCustomerId())
-                .orElseThrow(()->new AccountNotFoundException("Unauthorized"));
+                .orElseThrow(()->new AccountAccessDeniedException("You are not authorized to access this account"));
 
         AccountBalanceDTO dto = new AccountBalanceDTO();
         dto.setAccountNumber(account.getAccountNum());
@@ -81,7 +88,8 @@ public class AccountServiceImpl implements AccountService {
         return dto;
     }
 
-    public List<AccountResponseDTO> getAccpuntInfo(String email, Long accountNum) {
+    @Override
+    public List<AccountResponseDTO> getAccountInfo(String email, Long accountNum) {
         Customer customer = customerRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomerNotFoundException("Customer not found"));
 
@@ -97,7 +105,7 @@ public class AccountServiceImpl implements AccountService {
 
         Account account = accountRepository
                 .findByAccountNumAndCustomerId(accountNum, customer.getCustomerId())
-                .orElseThrow(() -> new AccountNotFoundException("Unauthorized"));
+                .orElseThrow(() -> new AccountAccessDeniedException("You are not authorized to access this account"));
 
         return List.of(toResponseDto(account));
     }

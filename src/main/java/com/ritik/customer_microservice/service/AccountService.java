@@ -12,5 +12,5 @@ public interface AccountService {
 
     AccountBalanceDTO checkBalance(String email, Long accountNum);
 
-    List<AccountResponseDTO> getAccpuntInfo(String email, Long accountNum);
+    List<AccountResponseDTO> getAccountInfo(String email, Long accountNum);
 }

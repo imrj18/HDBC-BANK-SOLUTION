@@ -44,7 +44,7 @@ public class CustomerServiceImpl implements CustomerService {
         return dto;
     }
 
-    private static Customer toEntity(CustomerRegisterDTO dto, PasswordEncoder passwordEncoder) {
+    private Customer toEntity(CustomerRegisterDTO dto) {
         Customer customer = new Customer();
 
         customer.setName(dto.getName());
@@ -77,7 +77,7 @@ public class CustomerServiceImpl implements CustomerService {
             throw new CustomerAlreadyExistsException("Phone already exists");
         }
 
-        Customer customer = toEntity(registerDTO, passwordEncoder);
+        Customer customer = toEntity(registerDTO);
 
 
         Customer savedCustomer = customerRepository.save(customer);
