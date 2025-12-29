@@ -1,8 +1,8 @@
 package com.ritik.customer_microservice.service;
 
-import com.ritik.customer_microservice.dto.AccountBalanceDTO;
-import com.ritik.customer_microservice.dto.AccountResponseDTO;
-import com.ritik.customer_microservice.dto.CreateAccountDTO;
+import com.ritik.customer_microservice.dto.accountDTO.AccountBalanceDTO;
+import com.ritik.customer_microservice.dto.accountDTO.AccountResponseDTO;
+import com.ritik.customer_microservice.dto.accountDTO.CreateAccountDTO;
 
 import java.util.List;
 

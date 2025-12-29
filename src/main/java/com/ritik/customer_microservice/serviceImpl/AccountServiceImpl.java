@@ -1,6 +1,8 @@
 package com.ritik.customer_microservice.serviceImpl;
 
-import com.ritik.customer_microservice.dto.*;
+import com.ritik.customer_microservice.dto.accountDTO.AccountBalanceDTO;
+import com.ritik.customer_microservice.dto.accountDTO.AccountResponseDTO;
+import com.ritik.customer_microservice.dto.accountDTO.CreateAccountDTO;
 import com.ritik.customer_microservice.enums.Status;
 import com.ritik.customer_microservice.exception.AccountAccessDeniedException;
 import com.ritik.customer_microservice.exception.AccountNotFoundException;
@@ -66,7 +68,7 @@ public class AccountServiceImpl implements AccountService {
 
         Account account = toEntity(createAccountDTO);
 
-        account.setCustomerId(customer.getCustomerId());
+        account.setCustomer(customer);
 
         account.setAccountNum(accountNumberGenerator.generate(createAccountDTO.getBankId()));
 
@@ -79,7 +81,7 @@ public class AccountServiceImpl implements AccountService {
     public AccountBalanceDTO checkBalance(String email, Long accountNum){
         Customer customer = customerRepository.findByEmail(email).orElseThrow(()->
                 new CustomerNotFoundException("Customer not found"));
-        Account account = accountRepository.findByAccountNumAndCustomerId(accountNum,customer.getCustomerId())
+        Account account = accountRepository.findByAccountNumAndCustomer_CustomerId(accountNum,customer.getCustomerId())
                 .orElseThrow(()->new AccountAccessDeniedException("You are not authorized to access this account"));
 
         AccountBalanceDTO dto = new AccountBalanceDTO();
@@ -94,7 +96,7 @@ public class AccountServiceImpl implements AccountService {
                 .orElseThrow(() -> new CustomerNotFoundException("Customer not found"));
 
         if (accountNum == null) {
-            List<Account> accounts = accountRepository.findByCustomerId(customer.getCustomerId());
+            List<Account> accounts = accountRepository.findByCustomer_CustomerId(customer.getCustomerId());
 
             if (accounts.isEmpty()) {
                 throw new AccountNotFoundException("Account not found.");
@@ -104,7 +106,7 @@ public class AccountServiceImpl implements AccountService {
         }
 
         Account account = accountRepository
-                .findByAccountNumAndCustomerId(accountNum, customer.getCustomerId())
+                .findByAccountNumAndCustomer_CustomerId(accountNum, customer.getCustomerId())
                 .orElseThrow(() -> new AccountAccessDeniedException("You are not authorized to access this account"));
 
         return List.of(toResponseDto(account));

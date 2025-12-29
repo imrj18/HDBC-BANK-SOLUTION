@@ -1,4 +1,4 @@
-package com.ritik.customer_microservice.dto;
+package com.ritik.customer_microservice.dto.customerDTO;
 
 import jakarta.validation.constraints.*;
 import lombok.Getter;

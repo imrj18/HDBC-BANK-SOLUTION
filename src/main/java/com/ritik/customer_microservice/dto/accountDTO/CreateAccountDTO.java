@@ -1,4 +1,4 @@
-package com.ritik.customer_microservice.dto;
+package com.ritik.customer_microservice.dto.accountDTO;
 
 import com.ritik.customer_microservice.enums.AccountType;
 import jakarta.validation.constraints.*;

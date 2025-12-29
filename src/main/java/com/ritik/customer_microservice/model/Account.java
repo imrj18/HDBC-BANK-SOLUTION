@@ -11,6 +11,8 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -33,8 +35,9 @@ public class Account {
     @Column(name = "account_id", columnDefinition = "BINARY(16)")
     private UUID accountId;
 
-    @Column(name = "customer_id", nullable = false, columnDefinition = "BINARY(16)")
-    private UUID customerId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id", nullable = false)
+    private Customer customer;
 
     @Column(name = "account_num", nullable = false, unique = true)
     private Long accountNum;
@@ -55,6 +58,13 @@ public class Account {
 
     @Column(name = "pin_hash", nullable = false, length = 255)
     private String pinHash;
+
+    @OneToMany(
+            mappedBy = "account",
+            cascade = CascadeType.ALL,
+            fetch = FetchType.LAZY
+    )
+    private List<Transaction> transactions = new ArrayList<>();
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

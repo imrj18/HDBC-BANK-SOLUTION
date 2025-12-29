@@ -1,4 +1,4 @@
-package com.ritik.customer_microservice.dto;
+package com.ritik.customer_microservice.dto.customerDTO;
 
 import lombok.Getter;
 import lombok.Setter;

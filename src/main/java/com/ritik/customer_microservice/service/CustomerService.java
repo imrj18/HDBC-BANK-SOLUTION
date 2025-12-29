@@ -1,9 +1,9 @@
 package com.ritik.customer_microservice.service;
 
-import com.ritik.customer_microservice.dto.CustomerLoginDTO;
-import com.ritik.customer_microservice.dto.CustomerRegisterDTO;
-import com.ritik.customer_microservice.dto.CustomerResponseDTO;
-import com.ritik.customer_microservice.dto.CustomerUpdateDTO;
+import com.ritik.customer_microservice.dto.customerDTO.CustomerLoginDTO;
+import com.ritik.customer_microservice.dto.customerDTO.CustomerRegisterDTO;
+import com.ritik.customer_microservice.dto.customerDTO.CustomerResponseDTO;
+import com.ritik.customer_microservice.dto.customerDTO.CustomerUpdateDTO;
 
 public interface CustomerService {
 
