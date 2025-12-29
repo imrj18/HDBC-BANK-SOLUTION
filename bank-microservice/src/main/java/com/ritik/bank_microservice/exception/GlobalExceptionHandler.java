@@ -24,6 +24,13 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(ex.getMessage(), 400));
     }
 
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ErrorResponse> handleBadRequest(ConflictException ex) {
+        log.warn("Conflict: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(ex.getMessage(), 409));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex) {
         log.warn("Unexpected error occurred: {}", ex.getMessage());

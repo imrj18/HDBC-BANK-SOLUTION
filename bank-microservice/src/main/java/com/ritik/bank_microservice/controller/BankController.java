@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 @Slf4j
 @RestController
@@ -25,7 +26,7 @@ public class BankController {
 
     //Register Bank
     @PostMapping("/register")
-    public ResponseEntity<BankResponseDTO> addBank(@Valid @RequestBody BankRequestDTO dto) {
+    public ResponseEntity<BankResponseDTO> addBank(@RequestBody BankRequestDTO dto) {
         log.info("API call: POST /api/banks/register");
         return ResponseEntity.status(HttpStatus.CREATED).body(service.addBank(dto));
     }

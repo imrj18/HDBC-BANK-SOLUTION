@@ -4,6 +4,7 @@ package com.ritik.bank_microservice.serviceImpl;
 import com.ritik.bank_microservice.dto.BankRequestDTO;
 import com.ritik.bank_microservice.dto.BankResponseDTO;
 import com.ritik.bank_microservice.exception.BadRequestException;
+import com.ritik.bank_microservice.exception.ConflictException;
 import com.ritik.bank_microservice.exception.ResourceNotFoundException;
 import com.ritik.bank_microservice.model.Bank;
 import com.ritik.bank_microservice.repository.BankRepository;
@@ -44,12 +45,16 @@ public class BankServiceImpl implements BankService {
         }
         if(repository.findByIfscCode(dto.getIfscCode()).isPresent()){
             log.warn("Bank creation failed. IFSC already exists: {}", dto.getIfscCode());
-            throw new BadRequestException("Ifsc code already exists.");
+            throw new ConflictException("Ifsc code already exists.");
         }
-        if(dto.getBankName().isEmpty() || dto.getBranch().isEmpty()){
-            log.warn("Bank creation failed. All Fields Required.");
-            throw new BadRequestException("All Fields Required");
+        if (dto.getBankName() == null || dto.getBankName().isBlank()
+                || dto.getBranch() == null || dto.getBranch().isBlank()) {
+
+
+            log.warn("Bank creation failed. Missing required fields");
+            throw new BadRequestException("All fields are required");
         }
+
 
         Bank bank = new Bank(dto.getBankName(), dto.getIfscCode(), dto.getBranch());
         repository.save(bank);
