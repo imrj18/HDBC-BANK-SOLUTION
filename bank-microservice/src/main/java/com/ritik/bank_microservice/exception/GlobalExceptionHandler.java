@@ -31,6 +31,13 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(ex.getMessage(), 409));
     }
 
+    @ExceptionHandler({BankNotFoundException.class, CustomerNotFoundException.class})
+    public ResponseEntity<ErrorResponse> handleNotFound(RuntimeException ex) {
+        log.warn("Not found: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse(ex.getMessage(), 409));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex) {
         log.warn("Unexpected error occurred: {}", ex.getMessage());

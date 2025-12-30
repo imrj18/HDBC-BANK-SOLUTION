@@ -3,27 +3,26 @@ package com.ritik.bank_microservice.serviceImpl;
 
 import com.ritik.bank_microservice.dto.BankRequestDTO;
 import com.ritik.bank_microservice.dto.BankResponseDTO;
-import com.ritik.bank_microservice.exception.BadRequestException;
-import com.ritik.bank_microservice.exception.ConflictException;
-import com.ritik.bank_microservice.exception.ResourceNotFoundException;
+import com.ritik.bank_microservice.dto.CustomerBalanceDTO;
+import com.ritik.bank_microservice.exception.*;
+import com.ritik.bank_microservice.feign.CustomerClient;
 import com.ritik.bank_microservice.model.Bank;
 import com.ritik.bank_microservice.repository.BankRepository;
 import com.ritik.bank_microservice.service.BankService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import java.math.BigDecimal;
 
 import java.util.List;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class BankServiceImpl implements BankService {
 
     private final BankRepository repository;
-
-    public BankServiceImpl(BankRepository repository) {
-
-        this.repository = repository;
-    }
+    private final CustomerClient customerClient;
 
     private BankResponseDTO mapToDTO(Bank bank) {
         return new BankResponseDTO(
@@ -36,62 +35,61 @@ public class BankServiceImpl implements BankService {
         );
     }
 
+
     @Override
     public BankResponseDTO addBank(BankRequestDTO dto) {
-        log.info("Request received to add bank.");
-        if(dto.getIfscCode().length() != 11){
-            log.warn("Bank creation failed. IFSC code invalid: {}", dto.getIfscCode());
-            throw new BadRequestException("Invalid IFSC Code");
-        }
-        if(repository.findByIfscCode(dto.getIfscCode()).isPresent()){
-            log.warn("Bank creation failed. IFSC already exists: {}", dto.getIfscCode());
-            throw new ConflictException("Ifsc code already exists.");
-        }
-        if (dto.getBankName() == null || dto.getBankName().isBlank()
-                || dto.getBranch() == null || dto.getBranch().isBlank()) {
 
-
-            log.warn("Bank creation failed. Missing required fields");
-            throw new BadRequestException("All fields are required");
+        if (repository.findByIfscCode(dto.getIfscCode()).isPresent()) {
+            throw new ConflictException("IFSC code already exists");
         }
 
+        Bank bank = repository.save(new Bank(dto.getBankName(), dto.getIfscCode(), dto.getBranch()));
 
-        Bank bank = new Bank(dto.getBankName(), dto.getIfscCode(), dto.getBranch());
-        repository.save(bank);
-        log.info("Bank created successfully with IFSC: {}", dto.getIfscCode());
         return mapToDTO(bank);
     }
 
     @Override
-    public List<BankResponseDTO> getBankDetails(String ifsc, Long bank_id) {
-        log.info("Fetching bank details. IFSC: {}, ID: {}", ifsc, bank_id);
-        if (ifsc != null && bank_id != null) {
-            log.warn("Invalid request: Both IFSC and ID provided");
-            throw new BadRequestException("Please provide either IFSC or ID, not both");
+    public List<BankResponseDTO> getBankDetails(String ifsc, Long bankId) {
+
+        if (ifsc != null && bankId != null) {
+            throw new BadRequestException("Provide either IFSC or bankId");
         }
 
-        if (ifsc != null && !ifsc.isBlank()) {
-            Bank bank = repository.findByIfscCode(ifsc).orElseThrow(() ->{
-                log.warn("Bank not found for IFSC: {}", ifsc);
-                return  new ResourceNotFoundException("Bank not found with IFSC " + ifsc);
-            });
-            log.info("Bank found for IFSC: {}", ifsc);
+        if (ifsc != null) {
+            if (ifsc.length() != 11) {
+                throw new BadRequestException("Invalid IFSC Code");
+            }
+
+            Bank bank = repository.findByIfscCode(ifsc).orElseThrow(() -> new ResourceNotFoundException("Bank not found"));
+
             return List.of(mapToDTO(bank));
         }
 
-        if (bank_id != null) {
-            Bank bank = repository.findById(bank_id).orElseThrow(() -> {
-                log.warn("Bank not found for ID: {}", bank_id);
-                return  new ResourceNotFoundException("Bank not found with id " + bank_id);
-            });
-            log.info("Bank found for ID: {}", bank_id);
+        if (bankId != null) {
+            Bank bank = repository.findById(bankId).orElseThrow(() -> new ResourceNotFoundException("Bank not found"));
+
             return List.of(mapToDTO(bank));
         }
 
-        // No filters → return all
-        log.info("Fetching all banks");
-        return repository.findAll().stream().map(this::mapToDTO).toList();
+        return repository.findAll()
+                .stream()
+                .map(this::mapToDTO)
+                .toList();
     }
 
-}
+    @Override
+    public List<CustomerBalanceDTO> getCustomersByIfsc(String ifsc,
+                                                       BigDecimal minBalance,
+                                                       BigDecimal maxBalance) {
 
+        Bank bank = repository.findByIfscCode(ifsc).orElseThrow(() -> new BankNotFoundException("Invalid IFSC"));
+
+        List<CustomerBalanceDTO> customers = customerClient.getCustomers(bank.getBankId(), minBalance, maxBalance);
+
+        if (customers.isEmpty()) {
+            throw new CustomerNotFoundException("No customers found");
+        }
+
+        return customers;
+    }
+}
