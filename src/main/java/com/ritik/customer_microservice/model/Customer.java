@@ -54,7 +54,7 @@ public class Customer {
 
     @OneToMany(
             mappedBy = "customer",
-            cascade = CascadeType.ALL,
+            cascade = {CascadeType.PERSIST, CascadeType.MERGE},
             fetch = FetchType.LAZY
     )
     private List<Account> accounts = new ArrayList<>();

@@ -61,7 +61,7 @@ public class Account {
 
     @OneToMany(
             mappedBy = "account",
-            cascade = CascadeType.ALL,
+            cascade = {CascadeType.PERSIST},
             fetch = FetchType.LAZY
     )
     private List<Transaction> transactions = new ArrayList<>();

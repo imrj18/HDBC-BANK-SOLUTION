@@ -15,58 +15,37 @@ import java.util.function.Function;
 @Service
 public class JwtServiceImpl {
 
+    private final SecretKey userKey;
 
-
-    private final String secretKey;
-
-    public JwtServiceImpl(@Value("${jwt.secret}") String secretKey) {
-        this.secretKey = secretKey;
+    public JwtServiceImpl(@Value("${jwt.secret}") String userSecret) {
+        this.userKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(userSecret));
     }
 
-    private SecretKey getKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
-        return Keys.hmacShaKeyFor(keyBytes);
-    }
-
-    public String generateToken(String email){
-        //Map<String, Object> claims = new HashMap<>();
+    public String generateUserToken(String email) {
         return Jwts.builder()
                 .subject(email)
+                .claim("type", "USER")
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + 10 * 60 * 1000))
-                .signWith(getKey())
+                .expiration(new Date(System.currentTimeMillis() + 10 * 60 * 1000)) // 10 min
+                .signWith(userKey)
                 .compact();
-
     }
 
-    public String extractEmail(String token) {
-        return extractClaim(token, Claims::getSubject);
-    }
-
-    private <T> T extractClaim(String token, Function<Claims, T> claimResolver) {
-        final Claims claims = extractAllClaims(token);
-        return claimResolver.apply(claims);
-    }
-
-    private Claims extractAllClaims(String token) {
+    public Claims extractClaims(String token) {
         return Jwts.parser()
-                .verifyWith(getKey())
+                .verifyWith(userKey)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
     }
 
-    public boolean validateToken(String token, UserDetails userDetails) {
-        final String userName = extractEmail(token);
-        return (userName.equals(userDetails.getUsername()) && !isTokenExpired(token));
+    public String extractEmail(String token) {
+        return extractClaims(token).getSubject();
     }
 
-    private boolean isTokenExpired(String token) {
-        return extractExpiration(token).before(new Date());
-    }
-
-    private Date extractExpiration(String token) {
-        return extractClaim(token, Claims::getExpiration);
+    public boolean validateUserToken(String token, UserDetails userDetails) {
+        Claims claims = extractClaims(token);
+        return userDetails.getUsername().equals(claims.getSubject())
+                && claims.getExpiration().after(new Date());
     }
 }
-

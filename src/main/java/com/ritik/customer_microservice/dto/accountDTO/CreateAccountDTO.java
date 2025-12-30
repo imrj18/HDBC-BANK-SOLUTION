@@ -11,8 +11,9 @@ public class CreateAccountDTO {
     @NotNull(message = "Account type is required")
     private AccountType accountType;
 
-    @NotNull(message = "Bank ID is required")
-    private Long bankId;
+    @NotBlank(message = "IFSC code is required")
+    @Size(min = 11, max = 11, message = "IFSC must be 11 characters")
+    private String ifscCode;
 
     @NotNull(message = "PIN is required")
     @Size(min = 4, max = 4, message = "PIN must be 4 to 6 digits")

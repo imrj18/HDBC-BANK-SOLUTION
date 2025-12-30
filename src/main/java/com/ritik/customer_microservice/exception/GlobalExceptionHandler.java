@@ -17,7 +17,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({
             CustomerNotFoundException.class,
             AccountNotFoundException.class,
-            TransactionNotFoundException.class
+            TransactionNotFoundException.class,
+            BankNotFoundException.class
     })
     public ResponseEntity<ErrorResponse> handleNotFound(RuntimeException ex) {
         log.warn("Resource not found: {}", ex.getMessage());

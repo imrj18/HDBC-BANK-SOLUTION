@@ -3,16 +3,20 @@ package com.ritik.customer_microservice.serviceImpl;
 import com.ritik.customer_microservice.dto.accountDTO.AccountBalanceDTO;
 import com.ritik.customer_microservice.dto.accountDTO.AccountResponseDTO;
 import com.ritik.customer_microservice.dto.accountDTO.CreateAccountDTO;
+import com.ritik.customer_microservice.dto.external.BankResponseDTO;
 import com.ritik.customer_microservice.enums.Status;
 import com.ritik.customer_microservice.exception.AccountAccessDeniedException;
 import com.ritik.customer_microservice.exception.AccountNotFoundException;
+import com.ritik.customer_microservice.exception.BankNotFoundException;
 import com.ritik.customer_microservice.exception.CustomerNotFoundException;
+import com.ritik.customer_microservice.feign.BankClient;
 import com.ritik.customer_microservice.model.Account;
 import com.ritik.customer_microservice.model.Customer;
 import com.ritik.customer_microservice.repository.AccountRepository;
 import com.ritik.customer_microservice.repository.CustomerRepository;
 import com.ritik.customer_microservice.service.AccountService;
 import jakarta.transaction.Transactional;
+import jakarta.ws.rs.ServiceUnavailableException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -32,6 +36,8 @@ public class AccountServiceImpl implements AccountService {
 
     private final GenerateAccountNumber accountNumberGenerator;
 
+    private final BankClient bankClient;
+
     private AccountResponseDTO toResponseDto(Account account) {
 
         AccountResponseDTO dto = new AccountResponseDTO();
@@ -48,11 +54,11 @@ public class AccountServiceImpl implements AccountService {
         return dto;
     }
 
-    private Account toEntity(CreateAccountDTO dto) {
+    private Account toEntity(CreateAccountDTO dto, Long bankId) {
         Account account = new Account();
 
         account.setAccountType(dto.getAccountType());
-        account.setBankId(dto.getBankId());
+        account.setBankId(bankId);
         account.setPinHash(passwordEncoder.encode(dto.getPin()));
         account.setAccountStatus(Status.ACTIVE);
         account.setAmount(BigDecimal.ZERO);
@@ -62,20 +68,44 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     @Transactional
-    public AccountResponseDTO createAccount(String email, CreateAccountDTO createAccountDTO){
-        Customer customer = customerRepository.findByEmail(email).orElseThrow(()->
-                new CustomerNotFoundException("Customer not found"));
+    public AccountResponseDTO createAccount(String email, CreateAccountDTO dto) {
 
-        Account account = toEntity(createAccountDTO);
+        List<BankResponseDTO> banks;
 
+        try {
+            banks = bankClient.getBanks(dto.getIfscCode(), null);
+        } catch (feign.FeignException.NotFound ex) {
+            throw new BankNotFoundException("Invalid IFSC code");
+        } catch (feign.FeignException ex) {
+            throw new ServiceUnavailableException(
+                    "Bank service is currently unavailable. Please try again later"
+            );
+        }
+
+        if (banks == null || banks.isEmpty()) {
+            throw new BankNotFoundException("Invalid IFSC code");
+        }
+
+        Long bankId = banks.get(0).getBankId();
+
+        Customer customer = customerRepository.findByEmail(email)
+                .orElseThrow(() -> new CustomerNotFoundException("Customer not found"));
+
+        // Optional: prevent duplicate account
+        // if (accountRepository.existsByCustomerAndBankId(customer, bankId)) {
+        //     throw new ConflictException("Account already exists for this bank");
+        // }
+
+        Account account = toEntity(dto, bankId);
         account.setCustomer(customer);
-
-        account.setAccountNum(accountNumberGenerator.generate(createAccountDTO.getBankId()));
+        account.setAccountNum(accountNumberGenerator.generate(bankId));
 
         accountRepository.save(account);
 
         return toResponseDto(account);
     }
+
+
 
     @Override
     public AccountBalanceDTO checkBalance(String email, Long accountNum){

@@ -1,9 +1,9 @@
 package com.ritik.customer_microservice.service;
 
-import com.ritik.customer_microservice.dto.customerDTO.CustomerLoginDTO;
-import com.ritik.customer_microservice.dto.customerDTO.CustomerRegisterDTO;
-import com.ritik.customer_microservice.dto.customerDTO.CustomerResponseDTO;
-import com.ritik.customer_microservice.dto.customerDTO.CustomerUpdateDTO;
+import com.ritik.customer_microservice.dto.customerDTO.*;
+
+import java.math.BigDecimal;
+import java.util.List;
 
 public interface CustomerService {
 
@@ -14,4 +14,9 @@ public interface CustomerService {
     CustomerResponseDTO viewProfile(String email);
 
     CustomerResponseDTO updateProfile(String email, CustomerUpdateDTO updateDTO);
+
+    List<CustomerBalanceDTO> fetchCustomersByBankIdAndBalance(
+            Long bankId,
+            BigDecimal minBalance,
+            BigDecimal maxBalance);
 }

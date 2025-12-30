@@ -1,19 +1,23 @@
 package com.ritik.customer_microservice.serviceImpl;
 
-import com.ritik.customer_microservice.dto.customerDTO.CustomerLoginDTO;
-import com.ritik.customer_microservice.dto.customerDTO.CustomerRegisterDTO;
-import com.ritik.customer_microservice.dto.customerDTO.CustomerResponseDTO;
-import com.ritik.customer_microservice.dto.customerDTO.CustomerUpdateDTO;
+import com.ritik.customer_microservice.dto.customerDTO.*;
+import com.ritik.customer_microservice.dto.external.BankResponseDTO;
 import com.ritik.customer_microservice.enums.Status;
+import com.ritik.customer_microservice.exception.BankNotFoundException;
 import com.ritik.customer_microservice.exception.CustomerAlreadyExistsException;
 import com.ritik.customer_microservice.exception.CustomerNotFoundException;
 import com.ritik.customer_microservice.exception.WrongPasswordException;
+import com.ritik.customer_microservice.feign.BankClient;
 import com.ritik.customer_microservice.model.Customer;
 import com.ritik.customer_microservice.repository.CustomerRepository;
 import com.ritik.customer_microservice.service.CustomerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -62,6 +66,19 @@ public class CustomerServiceImpl implements CustomerService {
         return customer;
     }
 
+    private final BankClient bankClient;
+
+    public Long resolveBankIdFromIfsc(String ifsc) {
+
+        List<BankResponseDTO> banks = bankClient.getBanks(ifsc, null);
+
+        if (banks.isEmpty()) {
+            throw new BankNotFoundException("Invalid IFSC code");
+        }
+
+        return banks.get(0).getBankId();
+    }
+
     @Override
     public CustomerResponseDTO register(CustomerRegisterDTO registerDTO) {
 
@@ -91,27 +108,59 @@ public class CustomerServiceImpl implements CustomerService {
                 .orElseThrow(() -> new CustomerNotFoundException("Customer not found!!! Invalid email"));
 
         if (!passwordEncoder.matches(dto.getPassword(), customer.getPasswordHash())) {
-            throw new WrongPasswordException ("Wrong password");
+            throw new WrongPasswordException("Wrong password");
         }
 
-        return jwtService.generateToken(dto.getEmail());
+        return jwtService.generateUserToken(dto.getEmail());
     }
 
     @Override
-    public CustomerResponseDTO viewProfile(String email){
-        Customer customer = customerRepository.findByEmail(email).orElseThrow(()->
+    public CustomerResponseDTO viewProfile(String email) {
+        Customer customer = customerRepository.findByEmail(email).orElseThrow(() ->
                 new CustomerNotFoundException("Customer not found."));
         return toResponseDto(customer);
     }
 
     @Override
-    public CustomerResponseDTO updateProfile(String email,CustomerUpdateDTO updateDTO) {
-        Customer customer = customerRepository.findByEmail(email).orElseThrow(()->
+    public CustomerResponseDTO updateProfile(String email, CustomerUpdateDTO updateDTO) {
+        Customer customer = customerRepository.findByEmail(email).orElseThrow(() ->
                 new CustomerNotFoundException("Customer not found."));
         customer.setName(updateDTO.getName());
         customer.setPhone(updateDTO.getPhone());
         customer.setAddress(updateDTO.getAddress());
         customerRepository.save(customer);
         return toResponseDto(customer);
+    }
+
+
+    @Override
+    public List<CustomerBalanceDTO> fetchCustomersByBankIdAndBalance(
+            Long bankId,
+            BigDecimal minBalance,
+            BigDecimal maxBalance) {
+
+        List<Object[]> results =
+                customerRepository.findCustomersByBankIdAndBalance(
+                        bankId, minBalance, maxBalance);
+
+        if (results.isEmpty()) {
+            throw new CustomerNotFoundException("No customers found");
+        }
+
+        List<CustomerBalanceDTO> response = new ArrayList<>();
+
+        for (Object[] row : results) {
+            Customer customer = (Customer) row[0];
+            BigDecimal balance = (BigDecimal) row[1];
+
+            response.add(new CustomerBalanceDTO(
+                    customer.getCustomerId(),
+                    customer.getName(),
+                    customer.getEmail(),
+                    balance
+            ));
+        }
+
+        return response;
     }
 }
