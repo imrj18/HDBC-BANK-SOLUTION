@@ -9,6 +9,7 @@ import com.ritik.bank_microservice.feign.CustomerClient;
 import com.ritik.bank_microservice.model.Bank;
 import com.ritik.bank_microservice.repository.BankRepository;
 import com.ritik.bank_microservice.service.BankService;
+import jakarta.ws.rs.ServiceUnavailableException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -82,11 +83,21 @@ public class BankServiceImpl implements BankService {
                                                        BigDecimal minBalance,
                                                        BigDecimal maxBalance) {
 
-        Bank bank = repository.findByIfscCode(ifsc).orElseThrow(() -> new BankNotFoundException("Invalid IFSC"));
+        Bank bank = repository.findByIfscCode(ifsc)
+                .orElseThrow(() -> new BankNotFoundException("Invalid IFSC"));
 
-        List<CustomerBalanceDTO> customers = customerClient.getCustomers(bank.getBankId(), minBalance, maxBalance);
+        List<CustomerBalanceDTO> customers;
 
-        if (customers.isEmpty()) {
+        try {
+            customers = customerClient.getCustomers(
+                    bank.getBankId(), minBalance, maxBalance
+            );
+        } catch (feign.FeignException.NotFound ex) {
+            throw new CustomerNotFoundException("No customers found");
+        }
+
+
+        if (customers == null || customers.isEmpty()) {
             throw new CustomerNotFoundException("No customers found");
         }
 
