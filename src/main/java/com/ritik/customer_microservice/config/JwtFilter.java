@@ -1,8 +1,11 @@
 package com.ritik.customer_microservice.config;
 
+import com.ritik.customer_microservice.exception.UnauthorizedException;
 import com.ritik.customer_microservice.model.Customer;
 import com.ritik.customer_microservice.model.CustomerPrincipal;
+import com.ritik.customer_microservice.model.CustomerSession;
 import com.ritik.customer_microservice.repository.CustomerRepository;
+import com.ritik.customer_microservice.repository.CustomerSessionRepository;
 import com.ritik.customer_microservice.serviceImpl.JwtServiceImpl;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
@@ -10,6 +13,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -22,23 +26,18 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtServiceImpl jwtService;
     private final CustomerRepository customerRepository;
     private final UserDetailsService userDetailsService;
-
-    public JwtFilter(JwtServiceImpl jwtService,
-                     CustomerRepository customerRepository,
-                     UserDetailsService userDetailsService) {
-        this.jwtService = jwtService;
-        this.customerRepository = customerRepository;
-        this.userDetailsService = userDetailsService;
-    }
+    private final CustomerSessionRepository customerSessionRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -57,6 +56,21 @@ public class JwtFilter extends OncePerRequestFilter {
 
         try {
             Claims claims = jwtService.extractClaims(token);
+            CustomerSession session = customerSessionRepository.findByToken(token)
+                    .orElseThrow(() ->
+                            new UnauthorizedException("Session expired"));
+
+            LocalDateTime now = LocalDateTime.now();
+
+            if (session.getLastActivityTime().plusMinutes(5).isBefore(now)) {
+
+                customerSessionRepository.delete(session);
+                throw new UnauthorizedException("Logged out due to inactivity");
+            }
+
+            session.setLastActivityTime(now);
+            customerSessionRepository.save(session);
+
             authenticateUser(token, claims, request);
         } catch (Exception ex) {
             log.warn("JWT authentication failed: {}", ex.getMessage());

@@ -112,7 +112,7 @@ public class AccountServiceImpl implements AccountService {
         Customer customer = customerRepository.findByEmail(email).orElseThrow(()->
                 new CustomerNotFoundException("Customer not found"));
         Account account = accountRepository.findByAccountNumAndCustomer_CustomerId(accountNum,customer.getCustomerId())
-                .orElseThrow(()->new AccountAccessDeniedException("You are not authorized to access this account"));
+                .orElseThrow(()->new AccountNotFoundException("Account not found"));
 
         AccountBalanceDTO dto = new AccountBalanceDTO();
         dto.setAccountNumber(account.getAccountNum());
@@ -137,7 +137,7 @@ public class AccountServiceImpl implements AccountService {
 
         Account account = accountRepository
                 .findByAccountNumAndCustomer_CustomerId(accountNum, customer.getCustomerId())
-                .orElseThrow(() -> new AccountAccessDeniedException("You are not authorized to access this account"));
+                .orElseThrow(() -> new AccountNotFoundException("Account not found"));
 
         return List.of(toResponseDto(account));
     }

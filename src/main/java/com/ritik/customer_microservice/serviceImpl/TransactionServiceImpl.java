@@ -85,6 +85,7 @@ public class TransactionServiceImpl implements TransactionService {
         TransactionResponseDTO dto = new TransactionResponseDTO();
         dto.setTransactionId(transaction.getTransactionId());
         dto.setAccountNum(transaction.getAccountNum());
+        dto.setOperationType(transaction.getOperationType());
         dto.setTransactionType(transaction.getTransactionType());
         dto.setAmount(transaction.getAmount());
         dto.setClosingBalance(transaction.getClosingBalance());
@@ -98,6 +99,7 @@ public class TransactionServiceImpl implements TransactionService {
         TransactionHistoryDTO dto = new TransactionHistoryDTO();
 
         dto.setTransactionId(transaction.getTransactionId());
+        dto.setOperationType(transaction.getOperationType());
         dto.setTransactionType(transaction.getTransactionType());
         dto.setAmount(transaction.getAmount());
         dto.setClosingBalance(transaction.getClosingBalance());
@@ -208,7 +210,7 @@ public class TransactionServiceImpl implements TransactionService {
             Account account = accountRepository
                     .findByAccountNumAndCustomer_CustomerId(accountNum, customer.getCustomerId())
                     .orElseThrow(() ->
-                            new AccountAccessDeniedException("You are not authorized to access this account"));
+                            new AccountNotFoundException("Account not found"));
 
             List<Transaction> transactions =
                     transactionRepository.findByAccount_AccountId(account.getAccountId());

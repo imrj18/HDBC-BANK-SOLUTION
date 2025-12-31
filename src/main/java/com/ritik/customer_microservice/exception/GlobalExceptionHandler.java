@@ -25,13 +25,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse(ex.getMessage(), 404));
     }
 
-    @ExceptionHandler(CustomerAlreadyExistsException.class)
-    public ResponseEntity<ErrorResponse> handleDuplicate(CustomerAlreadyExistsException ex) {
+    @ExceptionHandler({CustomerAlreadyExistsException.class, AlreadyLoggedInException.class})
+    public ResponseEntity<ErrorResponse> handleDuplicate(RuntimeException ex) {
         log.warn("Conflict: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse(ex.getMessage(), 409));
     }
 
-    @ExceptionHandler({WrongPasswordException.class, WrongPinException.class})
+
+    @ExceptionHandler({WrongPasswordException.class, WrongPinException.class, UnauthorizedException.class})
     public ResponseEntity<ErrorResponse> handleAuthenticationErrors(RuntimeException ex) {
         log.warn("Authentication error: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(ex.getMessage(), 400));

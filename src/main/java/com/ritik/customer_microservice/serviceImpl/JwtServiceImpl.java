@@ -9,6 +9,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.function.Function;
 
@@ -47,5 +48,9 @@ public class JwtServiceImpl {
         Claims claims = extractClaims(token);
         return userDetails.getUsername().equals(claims.getSubject())
                 && claims.getExpiration().after(new Date());
+    }
+
+    public Date extractExpiryTime(String token) {
+        return extractClaims(token).getExpiration();
     }
 }

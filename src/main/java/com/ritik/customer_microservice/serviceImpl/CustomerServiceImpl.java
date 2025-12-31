@@ -1,22 +1,25 @@
 package com.ritik.customer_microservice.serviceImpl;
 
 import com.ritik.customer_microservice.dto.customerDTO.*;
-import com.ritik.customer_microservice.dto.external.BankResponseDTO;
 import com.ritik.customer_microservice.enums.Status;
-import com.ritik.customer_microservice.exception.BankNotFoundException;
+import com.ritik.customer_microservice.exception.AlreadyLoggedInException;
 import com.ritik.customer_microservice.exception.CustomerAlreadyExistsException;
 import com.ritik.customer_microservice.exception.CustomerNotFoundException;
 import com.ritik.customer_microservice.exception.WrongPasswordException;
-import com.ritik.customer_microservice.feign.BankClient;
 import com.ritik.customer_microservice.model.Customer;
+import com.ritik.customer_microservice.model.CustomerSession;
 import com.ritik.customer_microservice.repository.CustomerRepository;
+import com.ritik.customer_microservice.repository.CustomerSessionRepository;
 import com.ritik.customer_microservice.service.CustomerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 @Service
@@ -28,6 +31,8 @@ public class CustomerServiceImpl implements CustomerService {
     private final PasswordEncoder passwordEncoder;
 
     private final JwtServiceImpl jwtService;
+
+    private final CustomerSessionRepository customerSessionRepository;
 
     private static CustomerResponseDTO toResponseDto(Customer customer) {
 
@@ -66,19 +71,6 @@ public class CustomerServiceImpl implements CustomerService {
         return customer;
     }
 
-    private final BankClient bankClient;
-
-    public Long resolveBankIdFromIfsc(String ifsc) {
-
-        List<BankResponseDTO> banks = bankClient.getBanks(ifsc, null);
-
-        if (banks.isEmpty()) {
-            throw new BankNotFoundException("Invalid IFSC code");
-        }
-
-        return banks.get(0).getBankId();
-    }
-
     @Override
     public CustomerResponseDTO register(CustomerRegisterDTO registerDTO) {
 
@@ -105,14 +97,39 @@ public class CustomerServiceImpl implements CustomerService {
     public String verify(CustomerLoginDTO dto) {
 
         Customer customer = customerRepository.findByEmail(dto.getEmail())
-                .orElseThrow(() -> new CustomerNotFoundException("Customer not found!!! Invalid email"));
+                .orElseThrow(() ->
+                        new CustomerNotFoundException("Customer not found!!! Invalid email"));
 
         if (!passwordEncoder.matches(dto.getPassword(), customer.getPasswordHash())) {
             throw new WrongPasswordException("Wrong password");
         }
 
-        return jwtService.generateUserToken(dto.getEmail());
+        customerSessionRepository.findById(customer.getCustomerId())
+                .ifPresent(session -> {
+                    if (session.getExpiryTime().isAfter(LocalDateTime.now())) {
+                        throw new AlreadyLoggedInException("Customer already logged in. Token = "+session.getToken());
+                    }
+                });
+
+        String token = jwtService.generateUserToken(dto.getEmail());
+
+        CustomerSession session = new CustomerSession();
+        session.setCustomerId(customer.getCustomerId());
+        session.setToken(token);
+        Date expiryDate = jwtService.extractExpiryTime(token);
+
+        LocalDateTime expiryTime = expiryDate.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDateTime();
+
+        session.setExpiryTime(expiryTime);
+        session.setLastActivityTime(LocalDateTime.now());
+
+        customerSessionRepository.save(session);
+
+        return token;
     }
+
 
     @Override
     public CustomerResponseDTO viewProfile(String email) {
