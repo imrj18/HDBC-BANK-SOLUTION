@@ -9,7 +9,6 @@ import com.ritik.bank_microservice.feign.CustomerClient;
 import com.ritik.bank_microservice.model.Bank;
 import com.ritik.bank_microservice.repository.BankRepository;
 import com.ritik.bank_microservice.service.BankService;
-import jakarta.ws.rs.ServiceUnavailableException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -41,7 +40,7 @@ public class BankServiceImpl implements BankService {
     public BankResponseDTO addBank(BankRequestDTO dto) {
 
         if (repository.findByIfscCode(dto.getIfscCode()).isPresent()) {
-            throw new ConflictException("IFSC code already exists");
+            throw new IfscCodeAlreadyExistException("IFSC code already exists");
         }
 
         Bank bank = repository.save(new Bank(dto.getBankName(), dto.getIfscCode(), dto.getBranch()));
@@ -58,16 +57,16 @@ public class BankServiceImpl implements BankService {
 
         if (ifsc != null) {
             if (ifsc.length() != 11) {
-                throw new BadRequestException("Invalid IFSC Code");
+                throw new InvalidIfscCodeException("Invalid IFSC Code");
             }
 
-            Bank bank = repository.findByIfscCode(ifsc).orElseThrow(() -> new ResourceNotFoundException("Bank not found"));
+            Bank bank = repository.findByIfscCode(ifsc).orElseThrow(() -> new BankNotFoundException("Bank not found"));
 
             return List.of(mapToDTO(bank));
         }
 
         if (bankId != null) {
-            Bank bank = repository.findById(bankId).orElseThrow(() -> new ResourceNotFoundException("Bank not found"));
+            Bank bank = repository.findById(bankId).orElseThrow(() -> new BankNotFoundException("Bank not found"));
 
             return List.of(mapToDTO(bank));
         }

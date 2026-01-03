@@ -14,22 +14,15 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex) {
-        log.warn("Resource not found: {}", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ErrorResponse(ex.getMessage(), 404));
-    }
-
-    @ExceptionHandler(BadRequestException.class)
+    @ExceptionHandler({BadRequestException.class, InvalidIfscCodeException.class})
     public ResponseEntity<ErrorResponse> handleBadRequest(BadRequestException ex) {
         log.warn("Bad Request: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse(ex.getMessage(), 400));
     }
 
-    @ExceptionHandler(ConflictException.class)
-    public ResponseEntity<ErrorResponse> handleBadRequest(ConflictException ex) {
+    @ExceptionHandler(IfscCodeAlreadyExistException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicate(IfscCodeAlreadyExistException ex) {
         log.warn("Conflict: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse(ex.getMessage(), 409));
@@ -39,7 +32,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleNotFound(RuntimeException ex) {
         log.warn("Not found: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ErrorResponse(ex.getMessage(), 409));
+                .body(new ErrorResponse(ex.getMessage(), 404));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
