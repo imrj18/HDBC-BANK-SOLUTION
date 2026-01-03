@@ -5,10 +5,7 @@ import com.ritik.customer_microservice.dto.accountDTO.AccountResponseDTO;
 import com.ritik.customer_microservice.dto.accountDTO.CreateAccountDTO;
 import com.ritik.customer_microservice.dto.external.BankResponseDTO;
 import com.ritik.customer_microservice.enums.Status;
-import com.ritik.customer_microservice.exception.AccountAccessDeniedException;
-import com.ritik.customer_microservice.exception.AccountNotFoundException;
-import com.ritik.customer_microservice.exception.BankNotFoundException;
-import com.ritik.customer_microservice.exception.CustomerNotFoundException;
+import com.ritik.customer_microservice.exception.*;
 import com.ritik.customer_microservice.feign.BankClient;
 import com.ritik.customer_microservice.model.Account;
 import com.ritik.customer_microservice.model.Customer;
@@ -16,7 +13,6 @@ import com.ritik.customer_microservice.repository.AccountRepository;
 import com.ritik.customer_microservice.repository.CustomerRepository;
 import com.ritik.customer_microservice.service.AccountService;
 import jakarta.transaction.Transactional;
-import jakarta.ws.rs.ServiceUnavailableException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -104,8 +100,6 @@ public class AccountServiceImpl implements AccountService {
 
         return toResponseDto(account);
     }
-
-
 
     @Override
     public AccountBalanceDTO checkBalance(String email, Long accountNum){

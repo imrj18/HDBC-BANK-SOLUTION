@@ -20,34 +20,53 @@ public class GlobalExceptionHandler {
             TransactionNotFoundException.class,
             BankNotFoundException.class
     })
-    public ResponseEntity<ErrorResponse> handleNotFound(RuntimeException ex) {
+    public ResponseEntity<ErrorResponse> handleNotFoundException(RuntimeException ex) {
         log.warn("Resource not found: {}", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse(ex.getMessage(), 404));
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse(ex.getMessage(),"NOT_FOUND", 404));
     }
 
     @ExceptionHandler({CustomerAlreadyExistsException.class, AlreadyLoggedInException.class})
     public ResponseEntity<ErrorResponse> handleDuplicate(RuntimeException ex) {
         log.warn("Conflict: {}", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse(ex.getMessage(), 409));
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(ex.getMessage(),"CONFLICT", 409));
     }
 
 
-    @ExceptionHandler({WrongPasswordException.class, WrongPinException.class, UnauthorizedException.class})
+    @ExceptionHandler({WrongPasswordException.class, WrongPinException.class})
     public ResponseEntity<ErrorResponse> handleAuthenticationErrors(RuntimeException ex) {
         log.warn("Authentication error: {}", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(ex.getMessage(), 400));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(ex.getMessage(),"BAD_REQUEST", 400));
     }
+
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<ErrorResponse> handleUnauthorized(UnauthorizedException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ErrorResponse(ex.getMessage(),"UNAUTHORIZED", 401));
+    }
+
 
     @ExceptionHandler(AccountAccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccountAccessDeniedException ex) {
         log.warn("Access denied: {}", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorResponse(ex.getMessage(), 403));
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ErrorResponse(ex.getMessage(),"FORBIDDEN", 403));
+    }
+
+    @ExceptionHandler(ServiceUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleUnavailable(ServiceUnavailableException ex) {
+        log.warn("Access denied: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(new ErrorResponse(ex.getMessage(),"SERVICE_UNAVAILABLE",503 ));
     }
 
     @ExceptionHandler({InvalidAmountException.class, InsufficientBalanceException.class})
     public ResponseEntity<ErrorResponse> handleAmountErrors(RuntimeException ex) {
         log.warn("Amount error: {}", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(ex.getMessage(), 400));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(ex.getMessage(),"BAD_REQUEST", 400));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -62,6 +81,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex) {
         log.error("Unexpected error", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ErrorResponse("Internal Server Error", 500));
+                .body(new ErrorResponse("Internal Server Error","INTERNAL_SERVER_ERROR", 500));
     }
 }

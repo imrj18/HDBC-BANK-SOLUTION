@@ -156,9 +156,8 @@ public class CustomerServiceImpl implements CustomerService {
             BigDecimal minBalance,
             BigDecimal maxBalance) {
 
-        List<Object[]> results =
-                customerRepository.findCustomersByBankIdAndBalance(
-                        bankId, minBalance, maxBalance);
+        List<Object[]> results = customerRepository
+                .findCustomersByBankIdAndBalance(bankId, minBalance, maxBalance);
 
         if (results.isEmpty()) {
             throw new CustomerNotFoundException("No customers found");

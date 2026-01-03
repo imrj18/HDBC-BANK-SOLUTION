@@ -15,5 +15,5 @@ public interface AccountRepository extends JpaRepository<Account, UUID> {
 
     List<Account> findByCustomer_CustomerId(UUID customerId);
 
-    List<Account> findByCustomer_(Customer customer);
+    //List<Account> findByCustomer_(Customer customer);
 }

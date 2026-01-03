@@ -186,11 +186,13 @@ public class TransactionServiceImpl implements TransactionService {
         Account account = accountRepository.findByAccountNumAndCustomer_CustomerId(
                 withdrawRequestDTO.getAccountNum(),
                 customer.getCustomerId()).orElseThrow(()->new AccountNotFoundException("Account not found"));
-        if (account.getAmount().compareTo(withdrawRequestDTO.getAmount()) < 0) {
-            throw new InsufficientBalanceException("Insufficient balance");
-        }
+
         if(!passwordEncoder.matches(withdrawRequestDTO.getPin(), account.getPinHash())){
             throw new WrongPinException("Wrong pin");
+        }
+
+        if (account.getAmount().compareTo(withdrawRequestDTO.getAmount()) < 0) {
+            throw new InsufficientBalanceException("Insufficient balance");
         }
         //account.setAmount(account.getAmount().subtract(withdrawRequestDTO.getAmount()));
         Transaction transaction = toEntityForWithdraw(withdrawRequestDTO,account);
@@ -198,6 +200,14 @@ public class TransactionServiceImpl implements TransactionService {
 
         return toDto(transaction);
     }
+
+    //Customer not found
+    //account num provided and account not found
+    //account num provided and transaction not found
+    //account num provided and successfully transaction history
+    //account num not provided and account not found
+    //account num not provided and transaction not found
+    //account num not provided and successfully transaction history
 
     @Override
     public List<TransactionHistoryDTO> transactionHistory(String email, Long accountNum) {
