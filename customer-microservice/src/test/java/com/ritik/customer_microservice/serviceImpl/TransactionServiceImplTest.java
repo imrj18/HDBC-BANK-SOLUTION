@@ -1,0 +1,656 @@
+package com.ritik.customer_microservice.serviceImpl;
+
+import com.ritik.customer_microservice.dto.transactionDTO.*;
+import com.ritik.customer_microservice.exception.*;
+import com.ritik.customer_microservice.model.Account;
+import com.ritik.customer_microservice.model.Customer;
+import com.ritik.customer_microservice.model.Transaction;
+import com.ritik.customer_microservice.repository.AccountRepository;
+import com.ritik.customer_microservice.repository.CustomerRepository;
+import com.ritik.customer_microservice.repository.TransactionRepository;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+import java.math.BigDecimal;
+import java.util.*;
+
+@ExtendWith(MockitoExtension.class)
+class TransactionServiceImplTest {
+    @Mock
+    private CustomerRepository customerRepository;
+
+    @Mock
+    private AccountRepository accountRepository;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private TransactionRepository transactionRepository;
+
+    @InjectMocks
+    private TransactionServiceImpl transactionService;
+
+    private DepositRequestDTO depositRequestDTO;
+    private WithdrawRequestDTO withdrawRequestDTO;
+    private Customer customer;
+    private Account account;
+    private Transaction transaction;
+    private Account senderAccount;
+    private Account receiverAccount;
+    private TransferRequestDTO transferRequestDTO;
+
+    @BeforeEach
+    void setUp(){
+        depositRequestDTO = new DepositRequestDTO();
+        depositRequestDTO.setAmount(BigDecimal.valueOf(2000));
+        depositRequestDTO.setAccountNum(123456789L);
+
+        withdrawRequestDTO = new WithdrawRequestDTO();
+        withdrawRequestDTO.setAccountNum(123456789L);
+        withdrawRequestDTO.setAmount(BigDecimal.valueOf(2000));
+        withdrawRequestDTO.setPin("1234");
+
+        customer = new Customer();
+        customer.setCustomerId(UUID.randomUUID());
+        customer.setEmail("test@gmail.com");
+
+        account = new Account();
+        account.setAccountId(UUID.randomUUID());
+        account.setAmount(BigDecimal.ZERO);
+        account.setPinHash("pin-hash");
+
+        transaction = new Transaction();
+        transaction.setTransactionId(UUID.randomUUID());
+
+        transferRequestDTO = new TransferRequestDTO();
+        transferRequestDTO.setAmount(BigDecimal.valueOf(2000));
+        transferRequestDTO.setPin("1234");
+        transferRequestDTO.setFromAccountNum(123456789L);
+        transferRequestDTO.setToAccountNum(987654321L);
+
+        senderAccount = new Account();
+        senderAccount.setAccountId(UUID.randomUUID());
+        senderAccount.setAmount(BigDecimal.valueOf(5000));
+        senderAccount.setPinHash("encoded-pin");
+
+        receiverAccount = new Account();
+        receiverAccount.setAccountId(UUID.randomUUID());
+        receiverAccount.setAmount(BigDecimal.valueOf(2000));
+
+    }
+
+    @Test
+    void shouldDepositMoneySuccessFully(){
+
+        //Arrange
+        Mockito.when(customerRepository.findByEmail("test@gmail.com")).thenReturn(Optional.of(customer));
+
+        Mockito.when(accountRepository
+                .findByAccountNumAndCustomer_CustomerId(depositRequestDTO.getAccountNum(), customer.getCustomerId()))
+                .thenReturn(Optional.of(account));
+
+        Mockito.when(transactionRepository.save(Mockito.any(Transaction.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        //Act
+        TransactionResponseDTO response =
+                transactionService.depositMoney("test@gmail.com", depositRequestDTO);
+
+        //Assert
+        Assertions.assertNotNull(response);
+        Assertions.assertEquals(depositRequestDTO.getAmount(), response.getAmount());
+
+        Mockito.verify(transactionRepository).save(Mockito.any(Transaction.class));
+    }         //---------------------------------------1
+
+    @Test
+    void shouldThrowExceptionWhenCustomerNotFoundDuringDepositMoney(){
+        //Arrange
+        Mockito.when(customerRepository.findByEmail("test@gmail.com")).thenReturn(Optional.empty());
+
+        //Act + Assert
+        CustomerNotFoundException ex = Assertions.assertThrows(CustomerNotFoundException.class,
+                ()->transactionService.depositMoney("test@gmail.com",depositRequestDTO));
+
+        Assertions.assertEquals("Customer not found", ex.getMessage());
+
+        Mockito.verify(transactionRepository, Mockito.never()).save(Mockito.any());
+    }    //----------------2
+
+    @Test
+    void shouldThrowExceptionWhenAccountNotFoundDuringDepositMoney(){
+        //Arrange
+        Mockito.when(customerRepository.findByEmail("test@gmail.com")).thenReturn(Optional.ofNullable(customer));
+        Mockito.when(accountRepository
+                .findByAccountNumAndCustomer_CustomerId(depositRequestDTO.getAccountNum(), customer.getCustomerId()))
+                .thenReturn(Optional.empty());
+
+        //Act + Assert
+        AccountNotFoundException ex = Assertions.assertThrows(AccountNotFoundException.class,
+                ()->transactionService.depositMoney("test@gmail.com",depositRequestDTO));
+
+        Assertions.assertEquals("Account not found", ex.getMessage());
+
+        Mockito.verify(customerRepository).findByEmail(Mockito.any());
+        Mockito.verify(transactionRepository, Mockito.never()).save(Mockito.any());
+    }     //----------------3
+
+    @Test
+    void shouldThrowInvalidAmountExceptionWhenAmountIsZeroDuringDepositMoney() {
+
+        // Arrange
+        depositRequestDTO.setAmount(BigDecimal.ZERO);
+
+        // Act + Assert
+        InvalidAmountException ex = Assertions.assertThrows(InvalidAmountException.class,
+                        () -> transactionService.depositMoney("test@gmail.com", depositRequestDTO));
+
+        Assertions.assertEquals("Deposit amount must be greater than zero", ex.getMessage());
+
+        Mockito.verifyNoInteractions(
+                customerRepository,
+                accountRepository,
+                transactionRepository
+        );
+    }   //-------4
+
+    @Test
+    void shouldThrowInvalidAmountExceptionWhenAmountIsNegativeDuringDepositMoney() {
+
+        // Arrange
+        depositRequestDTO.setAmount(BigDecimal.valueOf(-500));
+
+        // Act + Assert
+        InvalidAmountException ex = Assertions.assertThrows(InvalidAmountException.class,
+                () -> transactionService.depositMoney("test@gmail.com", depositRequestDTO));
+
+        Assertions.assertEquals("Deposit amount must be greater than zero", ex.getMessage());
+
+        Mockito.verifyNoInteractions(
+                customerRepository,
+                accountRepository,
+                transactionRepository
+        );
+    } //-----5
+
+    @Test
+    void shouldThrowInvalidAmountExceptionWhenAmountIsZeroDuringWithdrawMoney() {
+
+        // Arrange
+        withdrawRequestDTO.setAmount(BigDecimal.ZERO);
+
+        // Act + Assert
+        InvalidAmountException ex = Assertions.assertThrows(InvalidAmountException.class,
+                () -> transactionService.withdrawMoney("test@gmail.com", withdrawRequestDTO));
+
+        Assertions.assertEquals("Withdraw amount must be greater than zero", ex.getMessage());
+
+        Mockito.verifyNoInteractions(customerRepository, accountRepository, transactionRepository);
+    } //--------6
+
+    @Test
+    void shouldThrowInvalidAmountExceptionWhenAmountIsNegativeDuringWithdrawMoney() {
+
+        // Arrange
+        withdrawRequestDTO.setAmount(BigDecimal.valueOf(-200));
+
+        // Act + Assert
+        InvalidAmountException ex = Assertions.assertThrows(InvalidAmountException.class,
+                () -> transactionService.withdrawMoney("test@gmail.com", withdrawRequestDTO));
+
+        Assertions.assertEquals("Withdraw amount must be greater than zero", ex.getMessage());
+
+        Mockito.verifyNoInteractions(customerRepository, accountRepository, transactionRepository);
+    } //----7
+
+    @Test
+    void shouldThrowExceptionWhenCustomerNotFoundDuringWithdrawMoney(){
+        //Arrange
+        Mockito.when(customerRepository.findByEmail("test@gmail.com")).thenReturn(Optional.empty());
+
+        //Act + Assert
+        CustomerNotFoundException ex = Assertions.assertThrows(CustomerNotFoundException.class,
+                ()->transactionService.withdrawMoney("test@gmail.com",withdrawRequestDTO));
+
+        Assertions.assertEquals("Customer not found", ex.getMessage());
+
+        Mockito.verify(transactionRepository, Mockito.never()).save(Mockito.any());
+    }   //----------------8
+
+    @Test
+    void shouldThrowExceptionWhenAccountNotFoundDuringWithdrawMoney(){
+        //Arrange
+        Mockito.when(customerRepository.findByEmail("test@gmail.com")).thenReturn(Optional.ofNullable(customer));
+
+        Mockito.when(accountRepository.findByAccountNumAndCustomer_CustomerId(withdrawRequestDTO.getAccountNum(),
+                                customer.getCustomerId())).thenReturn(Optional.empty());
+
+        // Act + Assert
+        AccountNotFoundException ex = Assertions.assertThrows(AccountNotFoundException.class,
+                ()->transactionService.withdrawMoney("test@gmail.com",withdrawRequestDTO));
+
+        Assertions.assertEquals("Account not found", ex.getMessage());
+
+        Mockito.verify(customerRepository).findByEmail(Mockito.any());
+        Mockito.verify(transactionRepository, Mockito.never()).save(Mockito.any());
+    }  //------------------9
+
+    @Test
+    void shouldThrowWrongPinExceptionWhenWrongPinDuringWithdrawMoney() {
+
+        // Arrange
+        Mockito.when(customerRepository.findByEmail("test@gmail.com")).thenReturn(Optional.ofNullable(customer));
+
+        Mockito.when(accountRepository.findByAccountNumAndCustomer_CustomerId(withdrawRequestDTO.getAccountNum(),
+                        customer.getCustomerId())).thenReturn(Optional.of(account));
+
+        Mockito.when(passwordEncoder.matches(withdrawRequestDTO.getPin(), account.getPinHash()))
+                .thenReturn(false);
+
+        // Act + Assert
+        Assertions.assertThrows(WrongPinException.class,
+                () -> transactionService.withdrawMoney("test@gmail.com", withdrawRequestDTO));
+
+        Mockito.verify(customerRepository).findByEmail(Mockito.any());
+        Mockito.verify(accountRepository).findByAccountNumAndCustomer_CustomerId(Mockito.any(), Mockito.any());
+        Mockito.verify(transactionRepository, Mockito.never()).save(Mockito.any());
+    } //----------------10
+
+    @Test
+    void shouldThrowInsufficientBalanceExceptionWhenInsufficientAmountDuringWithdrawMoney() {
+
+        // Arrange
+        withdrawRequestDTO.setAmount(BigDecimal.valueOf(20000));
+        account.setAmount(BigDecimal.valueOf(18000));
+
+        Mockito.when(customerRepository.findByEmail("test@gmail.com")).thenReturn(Optional.ofNullable(customer));
+
+        Mockito.when(accountRepository.findByAccountNumAndCustomer_CustomerId(withdrawRequestDTO.getAccountNum(),
+                        customer.getCustomerId())).thenReturn(Optional.of(account));
+        Mockito.when(passwordEncoder.matches(withdrawRequestDTO.getPin(), account.getPinHash()))
+                .thenReturn(true);
+
+        // Act + Assert
+        InsufficientBalanceException ex = Assertions.assertThrows(InsufficientBalanceException.class,
+                () -> transactionService.withdrawMoney("test@gmail.com", withdrawRequestDTO));
+
+        Assertions.assertEquals("Insufficient balance", ex.getMessage());
+
+        Mockito.verify(customerRepository).findByEmail(Mockito.any());
+        Mockito.verify(accountRepository).findByAccountNumAndCustomer_CustomerId(Mockito.any(), Mockito.any());
+        Mockito.verify(transactionRepository, Mockito.never()).save(Mockito.any());
+    }  //--11
+
+    @Test
+    void shouldWithdrawMoneySuccessfully() {
+        //Arrange
+        account.setAmount(BigDecimal.valueOf(5000));
+        Mockito.when(customerRepository.findByEmail("test@gmail.com")).thenReturn(Optional.of(customer));
+
+        Mockito.when(accountRepository.findByAccountNumAndCustomer_CustomerId(withdrawRequestDTO.getAccountNum(),
+                                customer.getCustomerId())).thenReturn(Optional.of(account));
+
+        Mockito.when(passwordEncoder.matches(withdrawRequestDTO.getPin(), account.getPinHash())).thenReturn(true);
+
+        Mockito.when(transactionRepository.save(Mockito.any(Transaction.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        //Act
+        TransactionResponseDTO response = transactionService.withdrawMoney("test@gmail.com", withdrawRequestDTO);
+
+        //Assert
+        Assertions.assertNotNull(response);
+        Assertions.assertEquals(BigDecimal.valueOf(2000), response.getAmount());
+
+        Mockito.verify(transactionRepository).save(Mockito.any(Transaction.class));
+    }     //----------------------------------------12
+
+    @Test
+    void shouldThrowExceptionWhenCustomerNotFoundDuringTransactionHistory(){
+        //Arrange
+        Mockito.when(customerRepository.findByEmail("test@gmail.com")).thenReturn(Optional.empty());
+
+        //Act + Assert
+        CustomerNotFoundException ex = Assertions.assertThrows(CustomerNotFoundException.class,
+                ()->transactionService.transactionHistory("test@gmail.com",null));
+
+        Assertions.assertEquals("Customer not found", ex.getMessage());
+
+        Mockito.verify(transactionRepository, Mockito.never()).save(Mockito.any());
+    }  //-----------13
+
+    @Test
+    void shouldThrowAccountNotFoundWhenAccountNumProvidedInTransactionHistory() {
+
+        //Arrange
+        Mockito.when(customerRepository.findByEmail("test@gmail.com")).thenReturn(Optional.of(customer));
+
+        Mockito.when(accountRepository
+                        .findByAccountNumAndCustomer_CustomerId(123456789L, customer.getCustomerId()))
+                .thenReturn(Optional.empty());
+
+        //Act + Assert
+        AccountNotFoundException ex = Assertions.assertThrows(AccountNotFoundException.class,
+                () -> transactionService.transactionHistory("test@gmail.com", 123456789L));
+
+        Assertions.assertEquals("Account not found", ex.getMessage());
+
+        Mockito.verify(transactionRepository, Mockito.never()).save(Mockito.any());
+    } //-------14
+
+    @Test
+    void shouldThrowTransactionNotFoundForAccountWhenAccountNumProvidedInTransactionHistory() {
+        //Arrange
+        Mockito.when(customerRepository.findByEmail("test@gmail.com")).thenReturn(Optional.of(customer));
+
+        Mockito.when(accountRepository
+                        .findByAccountNumAndCustomer_CustomerId(123456789L, customer.getCustomerId()))
+                .thenReturn(Optional.of(account));
+
+        Mockito.when(transactionRepository.findByAccount_AccountId(account.getAccountId()))
+                .thenReturn(Collections.emptyList());
+
+        //Act + Assert
+        TransactionNotFoundException ex = Assertions.assertThrows(TransactionNotFoundException.class,
+                () -> transactionService.transactionHistory("test@gmail.com", 123456789L));
+
+        Assertions.assertEquals("Transactions not found", ex.getMessage());
+
+        Mockito.verify(transactionRepository, Mockito.never()).save(Mockito.any());
+    }  //---15
+
+    @Test
+    void shouldGetTransactionHistoryWhenAccountNumProvided() {
+        //Arrange
+        Mockito.when(customerRepository.findByEmail("test@gmail.com")).thenReturn(Optional.of(customer));
+
+        Mockito.when(accountRepository.findByAccountNumAndCustomer_CustomerId(
+                123456789L, customer.getCustomerId())).thenReturn(Optional.of(account));
+
+        Mockito.when(transactionRepository.findByAccount_AccountId(account.getAccountId()))
+                .thenReturn(List.of(transaction));
+
+        //Act
+        List<TransactionHistoryDTO> response =
+                transactionService.transactionHistory("test@gmail.com", 123456789L);
+
+        //Assert
+        Assertions.assertNotNull(response);
+        Assertions.assertEquals(1, response.size());
+
+        Mockito.verify(transactionRepository).findByAccount_AccountId(account.getAccountId());
+    }   //------------------------16
+
+    @Test
+    void shouldThrowAccountNotFoundWhenAccountNumNotProvidedInTransactionHistory() {
+        //Arrange
+        Mockito.when(customerRepository.findByEmail("test@gmail.com")).thenReturn(Optional.of(customer));
+
+        Mockito.when(accountRepository.findByCustomer_CustomerId(customer.getCustomerId()))
+                .thenReturn(Collections.emptyList());
+
+        //Act + Assert
+        AccountNotFoundException ex = Assertions.assertThrows(AccountNotFoundException.class,
+                () -> transactionService.transactionHistory("test@gmail.com", null));
+
+        Assertions.assertEquals("No accounts found for customer", ex.getMessage());
+
+        Mockito.verify(transactionRepository, Mockito.never()).save(Mockito.any());
+    }  //----17
+
+    @Test
+    void shouldThrowTransactionNotFoundWhenAccountNumNotProvidedInTransactionHistory() {
+
+        // Arrange
+        Mockito.when(customerRepository.findByEmail("test@gmail.com")).thenReturn(Optional.of(customer));
+
+        account.setAccountId(UUID.randomUUID());
+
+        Mockito.when(accountRepository.findByCustomer_CustomerId(customer.getCustomerId())).thenReturn(List.of(account));
+
+        Mockito.when(transactionRepository.findByAccount_AccountIdIn(List.of(account.getAccountId())))
+                .thenReturn(Collections.emptyList());
+
+        // Act + Assert
+        TransactionNotFoundException ex = Assertions.assertThrows(TransactionNotFoundException.class,
+                () -> transactionService.transactionHistory("test@gmail.com", null));
+
+        Assertions.assertEquals("Transactions not found", ex.getMessage());
+
+        Mockito.verify(customerRepository).findByEmail("test@gmail.com");
+
+        Mockito.verify(accountRepository).findByCustomer_CustomerId(customer.getCustomerId());
+
+        Mockito.verify(transactionRepository).findByAccount_AccountIdIn(List.of(account.getAccountId()));
+
+        Mockito.verify(accountRepository, Mockito.never())
+                .findByAccountNumAndCustomer_CustomerId(Mockito.any(), Mockito.any());
+    }  //-----18
+
+    @Test
+    void shouldGetTransactionHistoryWhenAccountNumNotProvidedInTransactionHistory() {
+
+        // Arrange
+        Mockito.when(customerRepository.findByEmail("test@gmail.com")).thenReturn(Optional.of(customer));
+
+        account.setAccountId(UUID.randomUUID());
+
+        Mockito.when(accountRepository.findByCustomer_CustomerId(customer.getCustomerId())).thenReturn(List.of(account));
+
+        Mockito.when(transactionRepository.findByAccount_AccountIdIn(List.of(account.getAccountId())))
+                .thenReturn(List.of(transaction));
+
+        // Act
+        List<TransactionHistoryDTO> response = transactionService
+                .transactionHistory("test@gmail.com", null);
+
+        //Assert
+        Assertions.assertNotNull(response);
+        Assertions.assertEquals(1, response.size());
+
+        // Verify correct interactions
+        Mockito.verify(customerRepository).findByEmail("test@gmail.com");
+
+        Mockito.verify(accountRepository).findByCustomer_CustomerId(customer.getCustomerId());
+
+        Mockito.verify(transactionRepository).findByAccount_AccountIdIn(List.of(account.getAccountId()));
+
+        Mockito.verify(accountRepository, Mockito.never())
+                .findByAccountNumAndCustomer_CustomerId(Mockito.any(), Mockito.any());
+    }  //---19
+
+    @Test
+    void shouldTransferMoneySuccessfully() {
+
+        // Arrange
+        Mockito.when(customerRepository.findByEmail("test@gmail.com")).thenReturn(Optional.of(customer));
+
+        Mockito.when(accountRepository.findByAccountNumAndCustomer_CustomerId(
+                        transferRequestDTO.getFromAccountNum(), customer.getCustomerId()))
+                .thenReturn(Optional.of(senderAccount));
+
+        Mockito.when(accountRepository.findByAccountNumAndCustomer_CustomerId(
+                transferRequestDTO.getToAccountNum(), customer.getCustomerId()))
+                .thenReturn(Optional.of(receiverAccount));
+
+        Mockito.when(passwordEncoder.matches(transferRequestDTO.getPin(), senderAccount.getPinHash()))
+                .thenReturn(true);
+
+        Mockito.when(transactionRepository.save(Mockito.any(Transaction.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        TransferResponseDTO response = transactionService.transferMoney("test@gmail.com", transferRequestDTO);
+
+        // Assert
+        Assertions.assertNotNull(response);
+        Assertions.assertEquals("SUCCESS", response.getStatus());
+        Assertions.assertEquals(transferRequestDTO.getAmount(), response.getAmount());
+        Assertions.assertNotNull(response.getTransactionReferenceId());
+        Assertions.assertNotEquals(response.getFromAccountNum(), response.getToAccountNum());
+
+        // Verify interactions
+        Mockito.verify(accountRepository).findByAccountNumAndCustomer_CustomerId(
+                transferRequestDTO.getFromAccountNum(), customer.getCustomerId());
+
+        Mockito.verify(accountRepository).findByAccountNumAndCustomer_CustomerId(
+                transferRequestDTO.getToAccountNum(), customer.getCustomerId());
+
+        Mockito.verify(transactionRepository, Mockito.times(2))
+                .save(Mockito.any(Transaction.class));
+    }  //-------------------------------------------20
+
+    @Test
+    void shouldThrowInvalidAmountExceptionWhenAmountIsZeroInTransferMoney() {
+        // Arrange
+        transferRequestDTO.setAmount(BigDecimal.ZERO);
+
+        //Act + Assert
+        InvalidAmountException ex = Assertions.assertThrows(InvalidAmountException.class,
+                () -> transactionService.transferMoney("test@gmail.com", transferRequestDTO));
+
+        Assertions.assertEquals("Transfer amount must be greater than zero", ex.getMessage());
+
+        Mockito.verifyNoInteractions(customerRepository, accountRepository, transactionRepository);
+    }  //----------21
+
+    @Test
+    void shouldThrowInvalidAmountExceptionWhenAmountIsNegativeInTransferMoney() {
+        //Arrange
+        transferRequestDTO.setAmount(BigDecimal.valueOf(-500));
+
+        //Act + Assert
+        InvalidAmountException ex = Assertions.assertThrows(InvalidAmountException.class,
+                () -> transactionService.transferMoney("test@gmail.com", transferRequestDTO));
+
+        Assertions.assertEquals("Transfer amount must be greater than zero", ex.getMessage());
+
+        Mockito.verifyNoInteractions(customerRepository, accountRepository, transactionRepository);
+    }  //------22
+
+    @Test
+    void shouldThrowExceptionWhenSenderAndReceiverSame() {
+        //Arrange
+        transferRequestDTO.setFromAccountNum(123456L);
+        transferRequestDTO.setToAccountNum(123456L);
+
+        //Act + Assert
+        IllegalArgumentException ex = Assertions.assertThrows(IllegalArgumentException.class,
+                () -> transactionService.transferMoney("test@gmail.com", transferRequestDTO));
+        Assertions.assertEquals("Sender and receiver accounts cannot be same", ex.getMessage());
+    }  //-----------------------------23
+
+    @Test
+    void shouldThrowExceptionWhenCustomerNotFoundDuringTransferMoney(){
+        //Arrange
+        Mockito.when(customerRepository.findByEmail("test@gmail.com")).thenReturn(Optional.empty());
+
+        //Act + Assert
+        CustomerNotFoundException ex = Assertions.assertThrows(CustomerNotFoundException.class,
+                ()->transactionService.transferMoney("test@gmail.com",transferRequestDTO));
+
+        Assertions.assertEquals("Customer not found", ex.getMessage());
+
+        Mockito.verify(transactionRepository, Mockito.never()).save(Mockito.any());
+    }  //----------------24
+
+    @Test
+    void shouldThrowExceptionWhenSenderAccountNotFoundDuringTransferMoney(){
+        //Arrange
+        Mockito.when(customerRepository.findByEmail("test@gmail.com")).thenReturn(Optional.ofNullable(customer));
+        Mockito.when(accountRepository.findByAccountNumAndCustomer_CustomerId(
+                transferRequestDTO.getFromAccountNum(),customer.getCustomerId()))
+                .thenReturn(Optional.empty());
+
+        //Act + Assert
+        AccountNotFoundException ex = Assertions.assertThrows(AccountNotFoundException.class,
+                ()->transactionService.transferMoney("test@gmail.com",transferRequestDTO));
+
+        Assertions.assertEquals("Account not found", ex.getMessage());
+
+        Mockito.verify(transactionRepository, Mockito.never()).save(Mockito.any());
+    } //------------25
+
+    @Test
+    void shouldThrowExceptionWhenReceiverAccountNotFoundDuringTransferMoney(){
+        //Arrange
+        Mockito.when(customerRepository.findByEmail("test@gmail.com")).thenReturn(Optional.ofNullable(customer));
+        Mockito.when(accountRepository.findByAccountNumAndCustomer_CustomerId(
+                        transferRequestDTO.getFromAccountNum(),customer.getCustomerId()))
+                .thenReturn(Optional.ofNullable(senderAccount));
+        Mockito.when(accountRepository.findByAccountNumAndCustomer_CustomerId(
+                        transferRequestDTO.getToAccountNum(),customer.getCustomerId()))
+                .thenReturn(Optional.empty());
+
+        //Act + Assert
+        AccountNotFoundException ex = Assertions.assertThrows(AccountNotFoundException.class,
+                ()->transactionService.transferMoney("test@gmail.com",transferRequestDTO));
+
+        Assertions.assertEquals("Account not found", ex.getMessage());
+
+        Mockito.verify(transactionRepository, Mockito.never()).save(Mockito.any());
+    }  //---------26
+
+    @Test
+    void shouldThrowWrongPinException() {
+        //Arrange
+        Mockito.when(customerRepository.findByEmail("test@gmail.com")).thenReturn(Optional.of(customer));
+
+        Mockito.when(accountRepository.findByAccountNumAndCustomer_CustomerId(
+                transferRequestDTO.getFromAccountNum(), customer.getCustomerId()))
+                .thenReturn(Optional.of(senderAccount));
+
+        Mockito.when(accountRepository.findByAccountNumAndCustomer_CustomerId(
+                transferRequestDTO.getToAccountNum(), customer.getCustomerId()))
+                .thenReturn(Optional.of(receiverAccount));
+
+        Mockito.when(passwordEncoder.matches(
+                        transferRequestDTO.getPin(), senderAccount.getPinHash())).thenReturn(false);
+
+        //Act  + Assert
+        WrongPinException ex = Assertions.assertThrows(WrongPinException.class,
+                () -> transactionService.transferMoney("test@gmail.com", transferRequestDTO));
+
+        Assertions.assertEquals("Wrong PIN", ex.getMessage());
+
+        Mockito.verify(transactionRepository, Mockito.never()).save(Mockito.any());
+    }  //----------------------------------------------27
+
+    @Test
+    void shouldThrowInsufficientBalanceException() {
+        //Arrange
+        Mockito.when(customerRepository.findByEmail("test@gmail.com")).thenReturn(Optional.of(customer));
+
+        senderAccount.setAmount(BigDecimal.valueOf(1000));
+        senderAccount.setPinHash("pin-hash");
+
+        transferRequestDTO.setAmount(BigDecimal.valueOf(5000));
+
+        Mockito.when(accountRepository.findByAccountNumAndCustomer_CustomerId(
+                        transferRequestDTO.getFromAccountNum(), customer.getCustomerId()))
+                .thenReturn(Optional.of(senderAccount));
+
+        Mockito.when(accountRepository.findByAccountNumAndCustomer_CustomerId(
+                        transferRequestDTO.getToAccountNum(), customer.getCustomerId()))
+                .thenReturn(Optional.of(receiverAccount));
+
+        Mockito.when(passwordEncoder.matches(Mockito.any(), Mockito.any())).thenReturn(true);
+
+        //Act + Assert
+        InsufficientBalanceException ex = Assertions.assertThrows(InsufficientBalanceException.class,
+                () -> transactionService.transferMoney("test@gmail.com", transferRequestDTO));
+
+        Assertions.assertEquals("Insufficient balance", ex.getMessage());
+
+        Mockito.verify(transactionRepository, Mockito.never()).save(Mockito.any());
+    }  //-----------------------------------28
+
+}

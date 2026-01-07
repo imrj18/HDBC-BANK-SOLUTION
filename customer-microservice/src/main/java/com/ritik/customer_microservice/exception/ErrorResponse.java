@@ -1,0 +1,23 @@
+package com.ritik.customer_microservice.exception;
+
+import lombok.Getter;
+import lombok.Setter;
+
+import java.time.LocalDateTime;
+
+@Getter
+@Setter
+public class ErrorResponse {
+
+    private String message;
+    private String errorCode;
+    private int status;
+    private LocalDateTime timestamp;
+
+    public ErrorResponse(String message,String errorCode, int status) {
+        this.message = message;
+        this.errorCode=errorCode;
+        this.status = status;
+        this.timestamp = LocalDateTime.now();
+    }
+}

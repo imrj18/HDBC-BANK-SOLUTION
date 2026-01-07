@@ -1,0 +1,182 @@
+package com.ritik.customer_microservice.serviceImpl;
+
+import com.ritik.customer_microservice.dto.customerDTO.*;
+import com.ritik.customer_microservice.enums.Status;
+import com.ritik.customer_microservice.exception.AlreadyLoggedInException;
+import com.ritik.customer_microservice.exception.CustomerAlreadyExistsException;
+import com.ritik.customer_microservice.exception.CustomerNotFoundException;
+import com.ritik.customer_microservice.exception.WrongPasswordException;
+import com.ritik.customer_microservice.model.Customer;
+import com.ritik.customer_microservice.model.CustomerSession;
+import com.ritik.customer_microservice.repository.CustomerRepository;
+import com.ritik.customer_microservice.repository.CustomerSessionRepository;
+import com.ritik.customer_microservice.service.CustomerService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class CustomerServiceImpl implements CustomerService {
+
+    private final CustomerRepository customerRepository;
+
+    private final PasswordEncoder passwordEncoder;
+
+    private final JwtServiceImpl jwtService;
+
+    private final CustomerSessionRepository customerSessionRepository;
+
+    private static CustomerResponseDTO toResponseDto(Customer customer) {
+
+        CustomerResponseDTO dto = new CustomerResponseDTO();
+
+        dto.setCustomerId(customer.getCustomerId().toString());
+
+        dto.setName(customer.getName());
+        dto.setEmail(customer.getEmail());
+        dto.setPhone(customer.getPhone());
+        dto.setAddress(customer.getAddress());
+        dto.setAadhar(customer.getAadhar());
+
+        dto.setBankStatus(customer.getStatus().name());
+        dto.setCreatedAt(customer.getCreatedAt());
+        dto.setUpdatedAt(customer.getUpdatedAt());
+
+        return dto;
+    }
+
+    private Customer toEntity(CustomerRegisterDTO dto) {
+        Customer customer = new Customer();
+
+        customer.setName(dto.getName());
+        customer.setEmail(dto.getEmail());
+        customer.setPhone(dto.getPhone());
+        customer.setAddress(dto.getAddress());
+        customer.setAadhar(dto.getAadhar());
+
+        customer.setPasswordHash(
+                passwordEncoder.encode(dto.getPassword())
+        );
+
+        customer.setStatus(Status.ACTIVE);
+
+        return customer;
+    }
+
+    @Override
+    public CustomerResponseDTO register(CustomerRegisterDTO registerDTO) {
+
+        if (customerRepository.existsByEmail(registerDTO.getEmail())) {
+            throw new CustomerAlreadyExistsException("Email already exists");
+        }
+
+        if (customerRepository.existsByAadhar(registerDTO.getAadhar())) {
+            throw new CustomerAlreadyExistsException("Aadhaar already exists");
+        }
+
+        if (customerRepository.existsByPhone(registerDTO.getPhone())) {
+            throw new CustomerAlreadyExistsException("Phone already exists");
+        }
+
+        Customer customer = toEntity(registerDTO);
+
+
+        Customer savedCustomer = customerRepository.save(customer);
+        return toResponseDto(savedCustomer);
+    }
+
+    @Override
+    public String verify(CustomerLoginDTO dto) {
+
+        Customer customer = customerRepository.findByEmail(dto.getEmail())
+                .orElseThrow(() ->
+                        new CustomerNotFoundException("Customer not found!!! Invalid email"));
+
+        if (!passwordEncoder.matches(dto.getPassword(), customer.getPasswordHash())) {
+            throw new WrongPasswordException("Wrong password");
+        }
+
+        customerSessionRepository.findById(customer.getCustomerId())
+                .ifPresent(session -> {
+                    if (session.getExpiryTime().isAfter(LocalDateTime.now())) {
+                        throw new AlreadyLoggedInException("Customer already logged in. Token = "+session.getToken());
+                    }
+                });
+
+        String token = jwtService.generateUserToken(dto.getEmail());
+
+        CustomerSession session = new CustomerSession();
+        session.setCustomerId(customer.getCustomerId());
+        session.setToken(token);
+        Date expiryDate = jwtService.extractExpiryTime(token);
+
+        LocalDateTime expiryTime = expiryDate.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDateTime();
+
+        session.setExpiryTime(expiryTime);
+        session.setLastActivityTime(LocalDateTime.now());
+
+        customerSessionRepository.save(session);
+
+        return token;
+    }
+
+
+    @Override
+    public CustomerResponseDTO viewProfile(String email) {
+        Customer customer = customerRepository.findByEmail(email).orElseThrow(() ->
+                new CustomerNotFoundException("Customer not found."));
+        return toResponseDto(customer);
+    }
+
+    @Override
+    public CustomerResponseDTO updateProfile(String email, CustomerUpdateDTO updateDTO) {
+        Customer customer = customerRepository.findByEmail(email).orElseThrow(() ->
+                new CustomerNotFoundException("Customer not found."));
+        customer.setName(updateDTO.getName());
+        customer.setPhone(updateDTO.getPhone());
+        customer.setAddress(updateDTO.getAddress());
+        customerRepository.save(customer);
+        return toResponseDto(customer);
+    }
+
+
+    @Override
+    public List<CustomerBalanceDTO> fetchCustomersByBankIdAndBalance(
+            Long bankId,
+            BigDecimal minBalance,
+            BigDecimal maxBalance) {
+
+        List<Object[]> results = customerRepository
+                .findCustomersByBankIdAndBalance(bankId, minBalance, maxBalance);
+
+        if (results.isEmpty()) {
+            throw new CustomerNotFoundException("No customers found");
+        }
+
+        List<CustomerBalanceDTO> response = new ArrayList<>();
+
+        for (Object[] row : results) {
+            Customer customer = (Customer) row[0];
+            BigDecimal balance = (BigDecimal) row[1];
+
+            response.add(new CustomerBalanceDTO(
+                    customer.getCustomerId(),
+                    customer.getName(),
+                    customer.getEmail(),
+                    balance
+            ));
+        }
+
+        return response;
+    }
+}
