@@ -8,6 +8,7 @@ import com.ritik.bank_microservice.exception.*;
 import com.ritik.bank_microservice.feign.CustomerClient;
 import com.ritik.bank_microservice.model.Bank;
 import com.ritik.bank_microservice.repository.BankRepository;
+import com.ritik.bank_microservice.wrapper.PageResponse;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,6 +17,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -99,24 +103,22 @@ class BankServiceImplTest {
                 .save(Mockito.any());
     }
 
-
-
-
     @Test
     void shouldReturnAllBankDetailsFromDBSuccessfully(){
 
         //Arrange
-        Mockito.when(repository.findAll()).thenReturn(List.of(savedEntity));
+        Page<Bank> page = new PageImpl<>(List.of(savedEntity));
 
-        List<BankResponseDTO> actual = service.getBankDetails(null,null);
+        Mockito.when(repository.findAll(Mockito.any(Pageable.class))).thenReturn(page);
+
+        PageResponse<BankResponseDTO> actual = service.getBankDetails(null,null,0,5);
 
         //Assert
-        Assertions.assertEquals("HDBC Bank", actual.get(0).getBankName());
-        Assertions.assertEquals("HDBC0000001",actual.get(0).getIfscCode());
-        Assertions.assertEquals("Bhilai", actual.get(0).getBranch());
+        Assertions.assertEquals("HDBC Bank", actual.getData().get(0).getBankName());
+        Assertions.assertEquals("HDBC0000001",actual.getData().get(0).getIfscCode());
+        Assertions.assertEquals("Bhilai", actual.getData().get(0).getBranch());
 
-        Mockito.verify(repository, Mockito.times(1)).
-                findAll();
+        Mockito.verify(repository, Mockito.times(1)).findAll(Mockito.any(Pageable.class));
     }
 
     @Test
@@ -126,12 +128,12 @@ class BankServiceImplTest {
         Mockito.when(repository.findByIfscCode("HDBC0000001")).thenReturn(Optional.of(savedEntity));
 
         // Act
-        List<BankResponseDTO> actual1 = service.getBankDetails("HDBC0000001",null);
+        PageResponse<BankResponseDTO> actual1 = service.getBankDetails("HDBC0000001",null,0,5);
 
         //Assert
-        Assertions.assertEquals("HDBC Bank", actual1.get(0).getBankName());
-        Assertions.assertEquals("HDBC0000001",actual1.get(0).getIfscCode());
-        Assertions.assertEquals("Bhilai", actual1.get(0).getBranch());
+        Assertions.assertEquals("HDBC Bank", actual1.getData().get(0).getBankName());
+        Assertions.assertEquals("HDBC0000001",actual1.getData().get(0).getIfscCode());
+        Assertions.assertEquals("Bhilai", actual1.getData().get(0).getBranch());
 
         Mockito.verify(repository, Mockito.times(1)).
                 findByIfscCode("HDBC0000001");
@@ -145,24 +147,23 @@ class BankServiceImplTest {
 
         // Act
 
-        List<BankResponseDTO> actual = service.getBankDetails(
-                null,1L
+        PageResponse<BankResponseDTO> actual = service.getBankDetails(
+                null,1L,0,5
         );
 
         //Assert
-        Assertions.assertEquals("HDBC Bank", actual.get(0).getBankName());
-        Assertions.assertEquals("HDBC0000001",actual.get(0).getIfscCode());
-        Assertions.assertEquals("Bhilai", actual.get(0).getBranch());
+        Assertions.assertEquals("HDBC Bank", actual.getData().get(0).getBankName());
+        Assertions.assertEquals("HDBC0000001",actual.getData().get(0).getIfscCode());
+        Assertions.assertEquals("Bhilai", actual.getData().get(0).getBranch());
 
 
-        Mockito.verify(repository, Mockito.times(1)).
-                findById(1L);
+        Mockito.verify(repository, Mockito.times(1)).findById(1L);
     }
 
     @Test
     void shouldThrowExceptionWhenBankIdAndIfscNotNullInGetBankDetails(){
         BadRequestException exception = Assertions.assertThrows(BadRequestException.class,
-                ()->service.getBankDetails("HDBC0000001",1L));
+                ()->service.getBankDetails("HDBC0000001",1L,0,5));
 
         Assertions.assertEquals("Provide either IFSC or bankId", exception.getMessage());
 
@@ -176,7 +177,7 @@ class BankServiceImplTest {
         //Acts + Assert
         InvalidIfscCodeException ex = Assertions.assertThrows(
                 InvalidIfscCodeException.class,
-                () -> service.getBankDetails("HDBC123", null)
+                () -> service.getBankDetails("HDBC123", null,0,5)
         );
 
         Assertions.assertEquals("Invalid IFSC Code", ex.getMessage());
@@ -184,7 +185,7 @@ class BankServiceImplTest {
         //Verify
         Mockito.verify(repository, Mockito.never()).findByIfscCode(Mockito.any());
         Mockito.verify(repository, Mockito.never()).findById(Mockito.any());
-        Mockito.verify(repository, Mockito.never()).findAll();
+        Mockito.verify(repository, Mockito.never()).findAll(Mockito.any(Pageable.class));
     }
 
     @Test
@@ -195,7 +196,7 @@ class BankServiceImplTest {
 
         //Act & Assert
         BankNotFoundException exception = Assertions.assertThrows(BankNotFoundException.class,
-                ()->service.getBankDetails("HDBC0000002",null));
+                ()->service.getBankDetails("HDBC0000002",null,0,5));
 
 
         Assertions.assertEquals("Bank not found",exception.getMessage());
@@ -216,7 +217,7 @@ class BankServiceImplTest {
 
         //Act & Assert
         BankNotFoundException exception = Assertions.assertThrows(BankNotFoundException.class,
-                ()->service.getBankDetails(null,1L));
+                ()->service.getBankDetails(null,1L,0,5));
 
 
         Assertions.assertEquals("Bank not found",exception.getMessage());
@@ -230,25 +231,24 @@ class BankServiceImplTest {
     }
 
 
-
     @Test
     void shouldReturnCustomersSuccessfully() {
         // Arrange
         Mockito.when(repository.findByIfscCode("HDBC0000001")).thenReturn(Optional.of(savedEntity));
 
-        Mockito.when(customerClient.getCustomers(1L, null, null))
-                .thenReturn(List.of(customerDTO));
+        Mockito.when(customerClient.getCustomers(1L, null, null,0,5))
+                .thenReturn(new PageResponse<>(List.of(customerDTO),0,1,5,true));
 
         // Act
-        List<CustomerBalanceDTO> result =
-                service.getCustomersByIfsc("HDBC0000001", null, null);
+        PageResponse<CustomerBalanceDTO> result =
+                service.getCustomersByIfsc("HDBC0000001", null, null,0,5);
 
         // Assert
         Assertions.assertNotNull(result);
-        Assertions.assertEquals(1, result.size());
-        Assertions.assertEquals("Ritik", result.get(0).getName());
+        Assertions.assertEquals(1, result.getData().size());
+        Assertions.assertEquals("Ritik", result.getData().get(0).getName());
 
-        Mockito.verify(customerClient).getCustomers(1L, null, null);
+        Mockito.verify(customerClient).getCustomers(1L, null, null,0,5);
     }
 
     @Test
@@ -258,11 +258,13 @@ class BankServiceImplTest {
 
         // Act + Assert
         BankNotFoundException ex = Assertions.assertThrows(BankNotFoundException.class,
-                        () -> service.getCustomersByIfsc(savedEntity.getIfscCode(), null, null));
+                        () -> service.getCustomersByIfsc(savedEntity.getIfscCode(),
+                                null, null,0,5));
 
         Assertions.assertEquals("Invalid IFSC", ex.getMessage());
 
-        Mockito.verify(customerClient, Mockito.never()).getCustomers(Mockito.any(), Mockito.any(), Mockito.any());
+        Mockito.verify(customerClient, Mockito.never()).getCustomers(Mockito.anyLong(), Mockito.any(), Mockito.any(),
+                        Mockito.anyInt(), Mockito.anyInt());
     }
 
     @Test
@@ -270,12 +272,13 @@ class BankServiceImplTest {
         // Arrange
         Mockito.when(repository.findByIfscCode("HDBC0000001")).thenReturn(Optional.of(savedEntity));
 
-        Mockito.when(customerClient.getCustomers(1L, null, null))
+        Mockito.when(customerClient.getCustomers(1L, null, null,0,5))
                 .thenThrow(Mockito.mock(feign.FeignException.NotFound.class));
 
         // Act + Assert
         CustomerNotFoundException ex = Assertions.assertThrows(CustomerNotFoundException.class,
-                        () -> service.getCustomersByIfsc("HDBC0000001", null, null));
+                        () -> service.getCustomersByIfsc("HDBC0000001", null,
+                                null,0,5));
 
         Assertions.assertEquals("No customers found", ex.getMessage());
     }
@@ -285,12 +288,13 @@ class BankServiceImplTest {
         // Arrange
         Mockito.when(repository.findByIfscCode("HDBC0000001")).thenReturn(Optional.of(savedEntity));
 
-        Mockito.when(customerClient.getCustomers(1L, null, null))
-                .thenReturn(Collections.emptyList());
+        Mockito.when(customerClient.getCustomers(1L, null, null,0,5))
+                .thenReturn(new PageResponse<>(Collections.emptyList(),0,1,5,true));
 
         // Act + Assert
         CustomerNotFoundException ex = Assertions.assertThrows(CustomerNotFoundException.class,
-                        () -> service.getCustomersByIfsc("HDBC0000001", null, null));
+                        () -> service.getCustomersByIfsc("HDBC0000001",
+                                null, null,0,5));
 
         Assertions.assertEquals("No customers found", ex.getMessage());
     }
@@ -300,11 +304,13 @@ class BankServiceImplTest {
         // Arrange
         Mockito.when(repository.findByIfscCode("HDBC0000001")).thenReturn(Optional.of(savedEntity));
 
-        Mockito.when(customerClient.getCustomers(1L, null, null)).thenReturn(null);
+        Mockito.when(customerClient.getCustomers(1L, null, null,0,0)).
+                thenReturn(null);
 
         // Act + Assert
         CustomerNotFoundException ex = Assertions.assertThrows(CustomerNotFoundException.class,
-                        () -> service.getCustomersByIfsc("HDBC0000001", null, null));
+                        () -> service.getCustomersByIfsc("HDBC0000001", null,
+                                null,0,0));
 
         Assertions.assertEquals("No customers found", ex.getMessage());
     }
@@ -317,13 +323,15 @@ class BankServiceImplTest {
 
         Mockito.when(repository.findByIfscCode("HDBC0000001")).thenReturn(Optional.of(savedEntity));
 
-        Mockito.when(customerClient.getCustomers(1L, min, max)).thenReturn(List.of(customerDTO));
+        Mockito.when(customerClient.getCustomers(1L, min, max,0,5))
+                .thenReturn(new PageResponse<>(List.of(customerDTO),0,1,5,true));
+
 
         // Act
-        service.getCustomersByIfsc("HDBC0000001", min, max);
+        service.getCustomersByIfsc("HDBC0000001", min, max,0,5);
 
         // Assert
-        Mockito.verify(customerClient).getCustomers(1L, min, max);
+        Mockito.verify(customerClient).getCustomers(1L, min, max,0,5);
     }
 
 

@@ -4,6 +4,7 @@ import com.ritik.bank_microservice.dto.BankRequestDTO;
 import com.ritik.bank_microservice.dto.BankResponseDTO;
 import com.ritik.bank_microservice.dto.CustomerBalanceDTO;
 import com.ritik.bank_microservice.service.BankService;
+import com.ritik.bank_microservice.wrapper.PageResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,7 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
-import java.util.List;
 
 @Slf4j
 @RestController
@@ -29,20 +29,24 @@ public class BankController {
     }
 
     @GetMapping
-    public ResponseEntity<List<BankResponseDTO>> getBanks(@RequestParam(required = false) String ifsc,
-                                                          @RequestParam(required = false) Long bankId) {
+    public ResponseEntity<PageResponse<BankResponseDTO>> getBanks(@RequestParam(required = false) String ifsc,
+                                                                  @RequestParam(required = false) Long bankId,
+                                                                  @RequestParam(defaultValue = "0") int page,
+                                                                  @RequestParam(defaultValue = "5") int size) {
 
         log.info("API call: GET /api/banks");
-        return ResponseEntity.ok(service.getBankDetails(ifsc, bankId));
+        return ResponseEntity.ok(service.getBankDetails(ifsc, bankId, page, size));
     }
 
     @GetMapping("/customers")
-    public ResponseEntity<List<CustomerBalanceDTO>> getCustomers(
+    public ResponseEntity<PageResponse<CustomerBalanceDTO>> getCustomers(
              @RequestParam String ifsc,
              @RequestParam(required = false) BigDecimal minBalance,
-             @RequestParam(required = false) BigDecimal maxBalance) {
+             @RequestParam(required = false) BigDecimal maxBalance,
+             @RequestParam(defaultValue = "0", required = false) int page,
+             @RequestParam(defaultValue = "5", required = false) int size) {
 
         log.info("API call: GET /api/banks/customers");
-        return ResponseEntity.ok(service.getCustomersByIfsc(ifsc, minBalance, maxBalance));
+        return ResponseEntity.ok(service.getCustomersByIfsc(ifsc, minBalance, maxBalance, page, size));
     }
 }

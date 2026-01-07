@@ -9,9 +9,16 @@ import com.ritik.bank_microservice.feign.CustomerClient;
 import com.ritik.bank_microservice.model.Bank;
 import com.ritik.bank_microservice.repository.BankRepository;
 import com.ritik.bank_microservice.service.BankService;
+import com.ritik.bank_microservice.wrapper.PageResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+
+
 import java.math.BigDecimal;
 
 import java.util.List;
@@ -49,11 +56,17 @@ public class BankServiceImpl implements BankService {
     }
 
     @Override
-    public List<BankResponseDTO> getBankDetails(String ifsc, Long bankId) {
+    public PageResponse<BankResponseDTO> getBankDetails(String ifsc, Long bankId, int page, int size) {
 
         if (ifsc != null && bankId != null) {
             throw new BadRequestException("Provide either IFSC or bankId");
         }
+
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by("createdAt").descending()
+        );
 
         if (ifsc != null) {
             if (ifsc.length() != 11) {
@@ -62,41 +75,52 @@ public class BankServiceImpl implements BankService {
 
             Bank bank = repository.findByIfscCode(ifsc).orElseThrow(() -> new BankNotFoundException("Bank not found"));
 
-            return List.of(mapToDTO(bank));
+            return new PageResponse<>(List.of(mapToDTO(bank)), 0,1,1, true);
         }
 
         if (bankId != null) {
             Bank bank = repository.findById(bankId).orElseThrow(() -> new BankNotFoundException("Bank not found"));
 
-            return List.of(mapToDTO(bank));
+            return new PageResponse<>(List.of(mapToDTO(bank)), 0,1,1, true);
+
         }
 
-        return repository.findAll()
-                .stream()
-                .map(this::mapToDTO)
-                .toList();
+        Page<Bank> bankPage = repository.findAll(pageable);
+
+        return new PageResponse<>(
+                bankPage.getContent()
+                        .stream()
+                        .map(this::mapToDTO)
+                        .toList(),
+                bankPage.getNumber(),
+                bankPage.getTotalPages(),
+                bankPage.getTotalElements(),
+                bankPage.isLast()
+        );
     }
 
     @Override
-    public List<CustomerBalanceDTO> getCustomersByIfsc(String ifsc,
+    public PageResponse<CustomerBalanceDTO> getCustomersByIfsc(String ifsc,
                                                        BigDecimal minBalance,
-                                                       BigDecimal maxBalance) {
+                                                       BigDecimal maxBalance,
+                                                       int page,
+                                                       int size) {
 
         Bank bank = repository.findByIfscCode(ifsc)
                 .orElseThrow(() -> new BankNotFoundException("Invalid IFSC"));
 
-        List<CustomerBalanceDTO> customers;
+
+        PageResponse<CustomerBalanceDTO> customers;
 
         try {
             customers = customerClient.getCustomers(
-                    bank.getBankId(), minBalance, maxBalance
-            );
+                    bank.getBankId(), minBalance, maxBalance, page, size);
         } catch (feign.FeignException.NotFound ex) {
             throw new CustomerNotFoundException("No customers found");
         }
 
 
-        if (customers == null || customers.isEmpty()) {
+        if (customers == null || customers.getData().isEmpty()) {
             throw new CustomerNotFoundException("No customers found");
         }
 

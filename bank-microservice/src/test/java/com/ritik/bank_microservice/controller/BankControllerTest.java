@@ -5,6 +5,7 @@ import com.ritik.bank_microservice.dto.BankRequestDTO;
 import com.ritik.bank_microservice.dto.BankResponseDTO;
 import com.ritik.bank_microservice.dto.CustomerBalanceDTO;
 import com.ritik.bank_microservice.service.BankService;
+import com.ritik.bank_microservice.wrapper.PageResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -16,9 +17,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -103,44 +102,54 @@ class BankControllerTest {
                         "Delhi", LocalDateTime.now(), LocalDateTime.now())
         );
 
-        Mockito.when(service.getBankDetails(null, null)).thenReturn(responseList);
+        Mockito.when(service.getBankDetails(null, null,0,2)).thenReturn(new PageResponse<>(
+                responseList,0,1,2,true));
 
-        mockMvc.perform(get("/api/banks"))
+        mockMvc.perform(get("/api/banks")
+                .param("page", "0")
+                .param("size", "2"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].bankName").value("HDBC Bank"))
-                .andExpect(jsonPath("$[1].bankName").value("HDBC Bank"));
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[0].bankName").value("HDBC Bank"))
+                .andExpect(jsonPath("$.data[1].bankName").value("HDBC Bank"));
 
-        Mockito.verify(service).getBankDetails( null, null);
+        Mockito.verify(service).getBankDetails( null, null,0,2);
     }
 
     @Test
     void shouldGetBanksByIfsc() throws Exception {
+        Mockito.when(service.getBankDetails("HDBC0000001", null,0,2)).
+                thenReturn(new PageResponse<>(
+                        List.of(responseDTO),
+                        0,
+                        1,
+                        1,
+                        true));
 
-
-        Mockito.when(service.getBankDetails("HDBC0000001", null)).
-                thenReturn(Collections.singletonList(responseDTO));
-
-        mockMvc.perform(get("/api/banks").param("ifsc", "HDBC0000001"))
+        mockMvc.perform(get("/api/banks")
+                        .param("ifsc", "HDBC0000001")
+                .param("page", "0")
+                .param("size", "2"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].bankName").value("HDBC Bank"));
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].bankName").value("HDBC Bank"));
 
-        Mockito.verify(service).getBankDetails( "HDBC0000001", null);
+        Mockito.verify(service).getBankDetails( "HDBC0000001", null,0,2);
     }
 
     @Test
     void shouldGetBanksByBankId() throws Exception {
 
-        Mockito.when(service.getBankDetails(null, 1L))
-                .thenReturn(Collections.singletonList(responseDTO));
+        Mockito.when(service.getBankDetails(null, 1L,0,2)).thenReturn(new PageResponse<>(
+                List.of(responseDTO),0,1,2,true));
 
-        mockMvc.perform(get("/api/banks").param("bankId", "1"))
+        mockMvc.perform(get("/api/banks").param("bankId", "1").param("page", "0")
+                .param("size", "2"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].bankName").value("HDBC Bank"));
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].bankName").value("HDBC Bank"));
 
-        Mockito.verify(service).getBankDetails(null,1L);
+        Mockito.verify(service).getBankDetails(null,1L,0,2);
     }
 
     @Test
@@ -149,51 +158,58 @@ class BankControllerTest {
 
         List<CustomerBalanceDTO> response = List.of(customerBalanceDTO);
 
-        Mockito.when(service.getCustomersByIfsc("HDBC0000001", null, null))
-                .thenReturn(response);
+        Mockito.when(service.getCustomersByIfsc("HDBC0000001", null, null,0,5))
+                .thenReturn(new PageResponse<>(response, 0,1,5,true));
 
         mockMvc.perform(get("/api/banks/customers")
-                        .param("ifsc", "HDBC0000001"))
+                        .param("ifsc", "HDBC0000001").param("page", "0")
+                .param("size", "5"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].name").isString())
-                .andExpect(jsonPath("$[0].balance").isNumber());
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].name").isString())
+                .andExpect(jsonPath("$.data[0].balance").isNumber());
 
-        Mockito.verify(service).getCustomersByIfsc("HDBC0000001", null, null);
+        Mockito.verify(service).getCustomersByIfsc("HDBC0000001", null, null,0,5);
     }
 
     @Test
     void shouldGetCustomersByIfscAndMinBalance() throws Exception {
 
-        Mockito.when(service.getCustomersByIfsc("HDBC0000001", BigDecimal.valueOf(1000), null))
-                .thenReturn(List.of(customerBalanceDTO));
+        Mockito.when(service.getCustomersByIfsc("HDBC0000001",BigDecimal.valueOf(1000),null,0,5))
+                .thenReturn(new PageResponse<>(List.of(customerBalanceDTO),0,1,5,true));
 
         mockMvc.perform(get("/api/banks/customers")
                         .param("ifsc", "HDBC0000001")
-                        .param("minBalance", "1000"))
+                        .param("minBalance", "1000")
+                        .param("page", "0")
+                        .param("size", "5"))
                         .andExpect(status().isOk())
-                        .andExpect(jsonPath("$.length()").value(1))
-                        .andExpect(jsonPath("$[0].name").isString())
-                        .andExpect(jsonPath("$[0].balance").isNumber());
+                        .andExpect(jsonPath("$.data.length()").value(1))
+                        .andExpect(jsonPath("$.data[0].name").isString())
+                        .andExpect(jsonPath("$.data[0].balance").isNumber());
 
-        Mockito.verify(service).getCustomersByIfsc("HDBC0000001", BigDecimal.valueOf(1000), null);
+        Mockito.verify(service).getCustomersByIfsc("HDBC0000001", BigDecimal.valueOf(1000),
+                null,0,5);
     }
 
     @Test
     void shouldGetCustomersByIfscAndMaxBalance() throws Exception {
 
-        Mockito.when(service.getCustomersByIfsc("HDBC0000001", null, BigDecimal.valueOf(1000)))
-                .thenReturn(List.of(customerBalanceDTO));
+        Mockito.when(service.getCustomersByIfsc("HDBC0000001", null,
+                        BigDecimal.valueOf(1000),0,5))
+                .thenReturn(new PageResponse<>(List.of(customerBalanceDTO),0,1,5,true));
 
         mockMvc.perform(get("/api/banks/customers")
                         .param("ifsc", "HDBC0000001")
-                        .param("maxBalance", "1000"))
+                        .param("maxBalance", "1000").param("page", "0")
+                .param("size", "5"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].name").isString())
-                .andExpect(jsonPath("$[0].balance").isNumber());
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].name").isString())
+                .andExpect(jsonPath("$.data[0].balance").isNumber());
 
-        Mockito.verify(service).getCustomersByIfsc("HDBC0000001", null, BigDecimal.valueOf(1000));
+        Mockito.verify(service).getCustomersByIfsc("HDBC0000001", null, BigDecimal.valueOf(1000),
+                0,5);
     }
 
     @Test
@@ -201,21 +217,24 @@ class BankControllerTest {
 
         Mockito.when(service.getCustomersByIfsc("HDBC0000001",
                         BigDecimal.valueOf(1000),
-                        BigDecimal.valueOf(3000)))
-                .thenReturn(List.of(customerBalanceDTO));
+                        BigDecimal.valueOf(3000),0,5))
+                .thenReturn(new PageResponse<>(List.of(customerBalanceDTO),0,1,5,true));
 
         mockMvc.perform(get("/api/banks/customers")
                         .param("ifsc", "HDBC0000001")
                         .param("minBalance", "1000")
-                        .param("maxBalance", "3000"))
+                        .param("maxBalance", "3000").param("page", "0")
+                .param("size", "5"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].name").isString())
-                .andExpect(jsonPath("$[0].balance").isNumber());
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].name").isString())
+                .andExpect(jsonPath("$.data[0].balance").isNumber());
 
         Mockito.verify(service).getCustomersByIfsc("HDBC0000001",
                 BigDecimal.valueOf(1000),
-                BigDecimal.valueOf(3000)
+                BigDecimal.valueOf(3000),
+                0,
+                5
         );
     }
 }
