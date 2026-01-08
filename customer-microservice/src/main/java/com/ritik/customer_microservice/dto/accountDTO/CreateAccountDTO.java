@@ -16,6 +16,7 @@ public class CreateAccountDTO {
     private String ifscCode;
 
     @NotNull(message = "PIN is required")
+    @Pattern(regexp = "^-?\\d+$", message = "Must be valid number.")
     @Size(min = 4, max = 4, message = "PIN must be 4 to 6 digits")
     private String pin;
 }
