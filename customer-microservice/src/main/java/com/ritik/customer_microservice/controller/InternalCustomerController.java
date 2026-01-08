@@ -4,6 +4,8 @@ import com.ritik.customer_microservice.dto.customerDTO.CustomerBalanceDTO;
 import com.ritik.customer_microservice.service.CustomerService;
 import com.ritik.customer_microservice.serviceImpl.PageResponse;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.security.access.prepost.PreAuthorize;

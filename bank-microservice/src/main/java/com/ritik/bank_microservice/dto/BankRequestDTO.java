@@ -10,6 +10,7 @@ import lombok.Setter;
 public class BankRequestDTO {
 
     @NotBlank(message = "Bank name is required")
+    @Size(min=4, max=50, message = "Size out of bound.")
     private String bankName;
 
     @NotBlank(message = "IFSC code is required")
@@ -17,5 +18,6 @@ public class BankRequestDTO {
     private String ifscCode;
 
     @NotBlank(message = "Branch is required")
+    @Size(min=4, max=50, message = "Size out of bound.")
     private String branch;
 }

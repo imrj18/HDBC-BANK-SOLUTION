@@ -8,15 +8,18 @@ import lombok.Setter;
 @Getter
 @Setter
 public class CreateAccountDTO {
+
     @NotNull(message = "Account type is required")
     private AccountType accountType;
 
     @NotBlank(message = "IFSC code is required")
-    @Size(min = 11, max = 11, message = "IFSC must be 11 characters")
+    @Pattern(
+            regexp = "^[A-Z]{4}0[A-Z0-9]{6}$",
+            message = "Invalid IFSC format"
+    )
     private String ifscCode;
 
-    @NotNull(message = "PIN is required")
-    @Pattern(regexp = "^-?\\d+$", message = "Must be valid number.")
-    @Size(min = 4, max = 4, message = "PIN must be 4 to 6 digits")
+    @NotBlank(message = "PIN is required")
+    @Pattern(regexp = "^\\d{4}$", message = "PIN must be exactly 4 digits")
     private String pin;
 }

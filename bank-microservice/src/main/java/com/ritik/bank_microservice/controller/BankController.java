@@ -6,10 +6,12 @@ import com.ritik.bank_microservice.dto.CustomerBalanceDTO;
 import com.ritik.bank_microservice.service.BankService;
 import com.ritik.bank_microservice.wrapper.PageResponse;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -18,6 +20,7 @@ import java.math.BigDecimal;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/banks")
+@Validated
 public class BankController {
 
     private final BankService service;
@@ -29,8 +32,13 @@ public class BankController {
     }
 
     @GetMapping
-    public ResponseEntity<PageResponse<BankResponseDTO>> getBanks(@RequestParam(required = false) String ifsc,
-                                                                  @RequestParam(required = false) Long bankId,
+    public ResponseEntity<PageResponse<BankResponseDTO>> getBanks(@RequestParam(required = false)
+                                                                      @Pattern(
+                                                                              regexp = "^[A-Z]{4}0[A-Z0-9]{6}$",
+                                                                              message = "Invalid IFSC format"
+                                                                      )
+                                                                      String ifsc,
+                                                                  @RequestParam(required = false) @Positive Long bankId,
                                                                   @RequestParam(defaultValue = "0") int page,
                                                                   @RequestParam(defaultValue = "5") int size) {
 
@@ -40,7 +48,13 @@ public class BankController {
 
     @GetMapping("/customers")
     public ResponseEntity<PageResponse<CustomerBalanceDTO>> getCustomers(
-             @RequestParam String ifsc,
+            @RequestParam
+            @NotBlank(message = "IFSC is required")
+            @Pattern(
+                    regexp = "^[A-Z]{4}0[A-Z0-9]{6}$",
+                    message = "Invalid IFSC format"
+            )
+            String ifsc,
              @RequestParam(required = false) BigDecimal minBalance,
              @RequestParam(required = false) BigDecimal maxBalance,
              @RequestParam(defaultValue = "0", required = false) int page,

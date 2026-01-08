@@ -6,10 +6,13 @@ import com.ritik.customer_microservice.dto.accountDTO.CreateAccountDTO;
 import com.ritik.customer_microservice.model.CustomerPrincipal;
 import com.ritik.customer_microservice.service.AccountService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,6 +20,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/customers/accounts")
 @RequiredArgsConstructor
+@Validated
 public class AccountController {
 
     private final AccountService accountService;
@@ -30,14 +34,18 @@ public class AccountController {
 
     @GetMapping("/{accountNum}/check-balance")
     public ResponseEntity<AccountBalanceDTO> checkBalance(@AuthenticationPrincipal CustomerPrincipal principal,
-                                                          @PathVariable Long accountNum) {
+                                                          @PathVariable @NotNull(message = "Account number is required")
+                                                          @Positive(message = "Account number must be positive")
+                                                          Long accountNum) {
         String email = principal.getUsername();
         return ResponseEntity.status(HttpStatus.OK).body(accountService.checkBalance(email,accountNum));
     }
 
     @GetMapping("/account-info")
     public ResponseEntity<List<AccountResponseDTO>> accountInfo(@AuthenticationPrincipal CustomerPrincipal principal,
-                                                                @RequestParam(required = false) Long accountNum){
+                                                                @RequestParam(required = false)
+                                                                @Positive(message = "Account number must be positive")
+                                                                Long accountNum){
         String email = principal.getUsername();
         return ResponseEntity.ok(accountService.getAccountInfo(email,accountNum));
     }

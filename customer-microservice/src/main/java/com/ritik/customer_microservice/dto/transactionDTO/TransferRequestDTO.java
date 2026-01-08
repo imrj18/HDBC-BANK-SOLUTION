@@ -1,9 +1,6 @@
 package com.ritik.customer_microservice.dto.transactionDTO;
 
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -15,9 +12,11 @@ import java.math.BigDecimal;
 public class TransferRequestDTO {
 
     @NotNull
+    @Positive(message = "Account number must be positive")
     private Long fromAccountNum;
 
     @NotNull
+    @Positive(message = "Account number must be positive")
     private Long toAccountNum;
 
     @NotNull

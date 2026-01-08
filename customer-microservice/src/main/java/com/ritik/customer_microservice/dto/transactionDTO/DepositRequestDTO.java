@@ -2,8 +2,10 @@ package com.ritik.customer_microservice.dto.transactionDTO;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.validation.annotation.Validated;
 
 import java.math.BigDecimal;
 
@@ -12,6 +14,7 @@ import java.math.BigDecimal;
 public class DepositRequestDTO {
 
     @NotNull
+    @Positive(message = "Account number must be positive")
     private Long accountNum;
 
     @NotNull
