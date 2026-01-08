@@ -10,7 +10,7 @@ public interface CustomerService {
 
     CustomerResponseDTO register(CustomerRegisterDTO registerDTO);
 
-    String verify(CustomerLoginDTO loginDTO);
+    AuthResponseDTO verify(CustomerLoginDTO loginDTO);
 
     CustomerResponseDTO viewProfile(String email);
 

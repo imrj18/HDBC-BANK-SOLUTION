@@ -20,6 +20,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -98,22 +99,21 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public String verify(CustomerLoginDTO dto) {
+    public AuthResponseDTO verify(CustomerLoginDTO dto) {
 
         Customer customer = customerRepository.findByEmail(dto.getEmail())
-                .orElseThrow(() ->
-                        new CustomerNotFoundException("Customer not found!!! Invalid email"));
+                .orElseThrow(() -> new CustomerNotFoundException("Customer not found with given email"));
 
         if (!passwordEncoder.matches(dto.getPassword(), customer.getPasswordHash())) {
-            throw new WrongPasswordException("Wrong password");
+            throw new WrongPasswordException("Invalid password");
         }
 
         customerSessionRepository.findById(customer.getCustomerId())
                 .ifPresent(session -> {
                     if (session.getExpiryTime().isAfter(LocalDateTime.now())) {
-                        throw new AlreadyLoggedInException(
-                                "Customer already logged in. Token = " + session.getToken()
-                        );
+                        throw new AlreadyLoggedInException("Customer already has an active session");
+                    } else {
+                        customerSessionRepository.delete(session);
                     }
                 });
 
@@ -132,8 +132,13 @@ public class CustomerServiceImpl implements CustomerService {
 
         customerSessionRepository.save(session);
 
-        return token;
+        return new AuthResponseDTO(
+                token,
+                "Bearer",
+                Duration.between(LocalDateTime.now(), expiryTime).getSeconds()
+        );
     }
+
 
 
     @Override

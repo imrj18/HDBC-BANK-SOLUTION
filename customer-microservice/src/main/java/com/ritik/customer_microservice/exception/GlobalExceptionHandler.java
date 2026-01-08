@@ -49,6 +49,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<ErrorResponse> handleUnauthorized(UnauthorizedException ex) {
+        log.warn("Unauthorized error: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(new ErrorResponse(ex.getMessage(),"UNAUTHORIZED", 401));
     }
@@ -63,7 +64,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ServiceUnavailableException.class)
     public ResponseEntity<ErrorResponse> handleUnavailable(ServiceUnavailableException ex) {
-        log.warn("Access denied: {}", ex.getMessage());
+        log.warn("Service Unavailable: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(new ErrorResponse(ex.getMessage(),"SERVICE_UNAVAILABLE",503 ));
     }
@@ -77,6 +78,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> handleValidationErrors(MethodArgumentNotValidException ex) {
+        log.warn("Validation error: {}", ex.getMessage());
         Map<String, String> errors = new HashMap<>();
         ex.getBindingResult().getFieldErrors().forEach(error ->
                 errors.put(error.getField(), error.getDefaultMessage()));
@@ -85,7 +87,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex) {
-
+        log.warn("Access denied: {}", ex.getMessage());
         ErrorResponse error = new ErrorResponse(
                 "ACCESS_DENIED",
                 "You do not have permission to access this resource",
@@ -96,9 +98,8 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    public ResponseEntity<Map<String, String>> handleTypeMismatch(
-            MethodArgumentTypeMismatchException ex) {
-
+    public ResponseEntity<Map<String, String>> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        log.warn("Type Mismatch: {}", ex.getMessage());
         Map<String, String> error = new HashMap<>();
 
         String expectedType = ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "valid value";
@@ -110,7 +111,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<Map<String, String>> handleConstraintViolation(ConstraintViolationException ex) {
-
+        log.warn("Constraint Violation: {}", ex.getMessage());
         Map<String, String> errors = new HashMap<>();
 
         ex.getConstraintViolations().forEach(violation -> {
@@ -123,7 +124,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<Map<String, String>> handleMissingParams(MissingServletRequestParameterException ex) {
-
+        log.warn("Missing Params: {}", ex.getMessage());
         Map<String, String> error = new HashMap<>();
         error.put(ex.getParameterName(), "This request parameter is required");
 
@@ -132,7 +133,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Map<String, String>> handleInvalidJson(HttpMessageNotReadableException ex) {
-
+        log.warn("Invalid JSON: {}", ex.getMessage());
         Map<String, String> error = new HashMap<>();
         error.put("error", "Invalid JSON request");
 
@@ -143,6 +144,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex) {
         log.error("Unexpected error", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ErrorResponse("Internal Server Error","INTERNAL_SERVER_ERROR", 500));
+                .body(new ErrorResponse("Internal Server Error",
+                        "INTERNAL_SERVER_ERROR", 500));
     }
 }

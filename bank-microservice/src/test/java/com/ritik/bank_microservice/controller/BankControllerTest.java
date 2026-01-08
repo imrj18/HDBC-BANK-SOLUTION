@@ -83,11 +83,25 @@ class BankControllerTest {
     void shouldReturnBadRequestWhenBankNameMissing() throws Exception {
 
         BankRequestDTO dto = new BankRequestDTO();
-        dto.setIfscCode("HDBC000001");
+        dto.setIfscCode("HDBC0000001");
         dto.setBranch("Bhilai");
 
         mockMvc.perform(post("/api/banks/register").contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto))).andExpect(status().isBadRequest());
+
+        Mockito.verify(service, Mockito.never()).addBank(Mockito.any());
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenIfscInvalid() throws Exception {
+
+        BankRequestDTO dto = new BankRequestDTO();
+        dto.setBankName("HDBC Bank");
+        dto.setIfscCode("HDBC00000001");
+        dto.setBranch("Bhilai");
+
+        mockMvc.perform(post("/api/banks/register").contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(dto))).andExpect(status().isBadRequest());
 
         Mockito.verify(service, Mockito.never()).addBank(Mockito.any());
     }
@@ -138,18 +152,49 @@ class BankControllerTest {
     }
 
     @Test
+    void shouldReturnBadRequestWhenIfscInvalidInGetBanksBy() throws Exception {
+
+        mockMvc.perform(get("/api/banks")
+                        .param("ifsc", "HDBC00000001")
+                        .param("page", "0")
+                        .param("size", "2"))
+                .andExpect(status().isBadRequest());
+        Mockito.verify(service, Mockito.never()).getBankDetails( "HDBC00000001", null,0,2);
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenBankIdInvalidInGetBanks() throws Exception {
+
+        mockMvc.perform(get("/api/banks").param("bankId", "a").param("page", "0")
+                .param("size", "2"));
+
+        Mockito.verify(service, Mockito.never()).getBankDetails(null,1L,0,2);
+    }
+
+    @Test
     void shouldGetBanksByBankId() throws Exception {
 
         Mockito.when(service.getBankDetails(null, 1L,0,2)).thenReturn(new PageResponse<>(
                 List.of(responseDTO),0,1,2,true));
 
         mockMvc.perform(get("/api/banks").param("bankId", "1").param("page", "0")
-                .param("size", "2"))
+                        .param("size", "2"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(1))
                 .andExpect(jsonPath("$.data[0].bankName").value("HDBC Bank"));
 
         Mockito.verify(service).getBankDetails(null,1L,0,2);
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenBankIdInvalidInGetBanksGetCustomers() throws Exception {
+
+        mockMvc.perform(get("/api/banks/customers")
+                        .param("ifsc", "HDBC00000001").param("page", "0")
+                .param("size", "5"))
+                .andExpect(status().isBadRequest());
+
+        Mockito.verify(service, Mockito.never()).getCustomersByIfsc("HDBC00000001", null, null,0,5);
     }
 
     @Test
@@ -163,7 +208,7 @@ class BankControllerTest {
 
         mockMvc.perform(get("/api/banks/customers")
                         .param("ifsc", "HDBC0000001").param("page", "0")
-                .param("size", "5"))
+                        .param("size", "5"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(1))
                 .andExpect(jsonPath("$.data[0].name").isString())

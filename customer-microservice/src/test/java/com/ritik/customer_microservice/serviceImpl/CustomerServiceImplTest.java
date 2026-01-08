@@ -8,11 +8,8 @@ import com.ritik.customer_microservice.exception.CustomerNotFoundException;
 import com.ritik.customer_microservice.exception.WrongPasswordException;
 import com.ritik.customer_microservice.model.Customer;
 import com.ritik.customer_microservice.model.CustomerSession;
-import com.ritik.customer_microservice.model.Transaction;
 import com.ritik.customer_microservice.repository.CustomerRepository;
 import com.ritik.customer_microservice.repository.CustomerSessionRepository;
-import com.ritik.customer_microservice.serviceImpl.CustomerServiceImpl;
-import com.ritik.customer_microservice.serviceImpl.JwtServiceImpl;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,7 +29,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 @ExtendWith(MockitoExtension.class)
-public class CustomerServiceImplTest {
+class CustomerServiceImplTest {
     @Mock
     private CustomerRepository customerRepository;
 
@@ -85,6 +82,11 @@ public class CustomerServiceImplTest {
         savedCustomer.setStatus(Status.ACTIVE);
 
         pageable = PageRequest.of(0, 5);
+
+        AuthResponseDTO authResponseDTO = new AuthResponseDTO();
+        authResponseDTO.setToken("jwt-token");
+        authResponseDTO.setTokenType("Bearer");
+        authResponseDTO.setExpiresIn(10L);
 
 
     }
@@ -193,8 +195,8 @@ public class CustomerServiceImplTest {
     }
 
     @Test
-    void shouldThrowExceptionCustomerAlreadyLoggedInWhenLogin(){
-        //Arrange
+    void shouldThrowExceptionCustomerAlreadyLoggedInWhenLogin() {
+        // Arrange
         Mockito.when(customerRepository.findByEmail(loginDTO.getEmail())).thenReturn(Optional.of(savedCustomer));
 
         Mockito.when(passwordEncoder.matches(loginDTO.getPassword(), savedCustomer.getPasswordHash()))
@@ -207,18 +209,19 @@ public class CustomerServiceImplTest {
         Mockito.when(customerSessionRepository.findById(savedCustomer.getCustomerId()))
                 .thenReturn(Optional.of(activeSession));
 
-        //Act + Assert
+        // Act + Assert
         AlreadyLoggedInException ex = Assertions.assertThrows(AlreadyLoggedInException.class,
                 () -> customerService.verify(loginDTO));
 
-        Assertions.assertTrue(ex.getMessage().contains("existing-token"));
+        Assertions.assertEquals("Customer already has an active session", ex.getMessage());
 
-        Mockito.verify(customerSessionRepository, Mockito.never()).save(Mockito.any());
+        Mockito.verify(customerSessionRepository, Mockito.never()).save(Mockito.any(CustomerSession.class));
     }
 
     @Test
     void shouldLoginSuccessfullyAndReturnTokenInLogin() {
-        //Arrange
+
+        // Arrange
         Mockito.when(customerRepository.findByEmail(loginDTO.getEmail())).thenReturn(Optional.of(savedCustomer));
 
         Mockito.when(passwordEncoder.matches(loginDTO.getPassword(), savedCustomer.getPasswordHash()))
@@ -233,14 +236,18 @@ public class CustomerServiceImplTest {
 
         Mockito.when(jwtService.extractExpiryTime(token)).thenReturn(expiryDate);
 
-        //Act
-        String result = customerService.verify(loginDTO);
+        // Act
+        AuthResponseDTO result = customerService.verify(loginDTO);
 
-        //Assert
-        Assertions.assertEquals(token, result);
+        // Assert
+        Assertions.assertNotNull(result);
+        Assertions.assertEquals(token, result.getToken());
+        Assertions.assertEquals("Bearer", result.getTokenType());
+        Assertions.assertTrue(result.getExpiresIn() > 0);
 
         Mockito.verify(customerSessionRepository).save(Mockito.any(CustomerSession.class));
     }
+
 
     @Test
     void shouldThrowExceptionWhenCustomerNotFoundUpdateDetails(){

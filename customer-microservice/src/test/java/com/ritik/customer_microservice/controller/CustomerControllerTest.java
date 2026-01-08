@@ -5,10 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ritik.customer_microservice.config.JwtFilter;
 import com.ritik.customer_microservice.config.WithMockCustomer;
 import com.ritik.customer_microservice.controller.CustomerController;
-import com.ritik.customer_microservice.dto.customerDTO.CustomerLoginDTO;
-import com.ritik.customer_microservice.dto.customerDTO.CustomerRegisterDTO;
-import com.ritik.customer_microservice.dto.customerDTO.CustomerResponseDTO;
-import com.ritik.customer_microservice.dto.customerDTO.CustomerUpdateDTO;
+import com.ritik.customer_microservice.dto.customerDTO.*;
 import com.ritik.customer_microservice.service.CustomerService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,6 +18,7 @@ import org.springframework.http.MediaType;
 
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 
@@ -46,6 +44,7 @@ class CustomerControllerTest {
     private CustomerRegisterDTO registerDTO;
     private CustomerLoginDTO loginDTO;
     private CustomerResponseDTO responseDTO;
+    private AuthResponseDTO authResponseDTO;
 
     @BeforeEach
     void setUp(){
@@ -66,6 +65,12 @@ class CustomerControllerTest {
         loginDTO = new CustomerLoginDTO();
         loginDTO.setEmail("jd@gmail.com");
         loginDTO.setPassword("J@1234");
+
+        authResponseDTO = new AuthResponseDTO();
+        authResponseDTO.setToken("jwt-token");
+        authResponseDTO.setTokenType("Bearer");
+        authResponseDTO.setExpiresIn(10L);
+
     }
 
     @Test
@@ -118,16 +123,16 @@ class CustomerControllerTest {
     void shouldLoginCustomerSuccessfully() throws Exception {
 
         // Arrange
-        String token = "wfnekgnw.ffojg3ik_wfsjg-vd";
-
-        Mockito.when(customerService.verify(Mockito.any(CustomerLoginDTO.class))).thenReturn(token);
+        Mockito.when(customerService.verify(Mockito.any(CustomerLoginDTO.class))).thenReturn(authResponseDTO);
 
         // Act & Assert
         mockMvc.perform(
                         post("/api/customers/auth/login").contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(loginDTO)))
-                .andExpect(status().isAccepted())
-                .andExpect(content().string(token));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").value("jwt-token"))
+                .andExpect(jsonPath("$.tokenType").value("Bearer"))
+                .andExpect(jsonPath("$.expiresIn").value(10L));
 
         Mockito.verify(customerService).verify(Mockito.any(CustomerLoginDTO.class));
     }
@@ -137,9 +142,8 @@ class CustomerControllerTest {
 
         // Arrange
         loginDTO.setEmail("invalid-email");
-        String token = "wfnekgnw.ffojg3ik_wfsjg-vd";
 
-        Mockito.when(customerService.verify(Mockito.any(CustomerLoginDTO.class))).thenReturn(token);
+        Mockito.when(customerService.verify(Mockito.any(CustomerLoginDTO.class))).thenReturn(authResponseDTO);
 
         // Act & Assert
         mockMvc.perform(
