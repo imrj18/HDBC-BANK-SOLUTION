@@ -2,10 +2,7 @@ package com.ritik.customer_microservice.model;
 
 import com.ritik.customer_microservice.enums.Status;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -65,6 +62,10 @@ public class Customer {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    public Customer(String mail) {
+        this.email = mail;
+    }
+
     @PrePersist
     public void onCreate() {
         this.customerId = UUID.randomUUID();
@@ -76,4 +77,12 @@ public class Customer {
     public void onUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
+
+    @OneToOne(
+            mappedBy = "customer",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY
+    )
+    private CustomerSession session;
 }

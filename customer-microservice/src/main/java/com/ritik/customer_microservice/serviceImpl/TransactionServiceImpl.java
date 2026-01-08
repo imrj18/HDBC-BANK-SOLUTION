@@ -14,6 +14,10 @@ import com.ritik.customer_microservice.repository.TransactionRepository;
 import com.ritik.customer_microservice.service.TransactionService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -210,10 +214,18 @@ public class TransactionServiceImpl implements TransactionService {
     //account num not provided and successfully transaction history
 
     @Override
-    public List<TransactionHistoryDTO> transactionHistory(String email, Long accountNum) {
+    public PageResponse<TransactionHistoryDTO> transactionHistory(String email, Long accountNum, int page, int size) {
+
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by("createdAt").descending()
+        );
 
         Customer customer = customerRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomerNotFoundException("Customer not found"));
+
+        Page<Transaction> transactions;
 
         if (accountNum != null) {
 
@@ -222,46 +234,37 @@ public class TransactionServiceImpl implements TransactionService {
                     .orElseThrow(() ->
                             new AccountNotFoundException("Account not found"));
 
-            List<Transaction> transactions =
-                    transactionRepository.findByAccount_AccountId(account.getAccountId());
+            transactions = transactionRepository.findByAccount_AccountId(account.getAccountId(), pageable);
 
-            if (transactions.isEmpty()) {
-                throw new TransactionNotFoundException("Transactions not found");
+        }else{
+            List<Account> accounts = accountRepository.findByCustomer_CustomerId(customer.getCustomerId());
+
+            if (accounts.isEmpty()) {
+                throw new AccountNotFoundException("No accounts found for customer");
             }
 
-            List<TransactionHistoryDTO> response = new ArrayList<>();
+            List<UUID> accountIds = accounts.stream().map(Account::getAccountId).toList();
 
-            for (Transaction transaction : transactions) {
-                response.add(toTransactionHistoryDto(transaction));
-            }
-            return response;
+            transactions = transactionRepository.findByAccount_AccountIdIn(accountIds, pageable);
+
         }
-
-        List<Account> accounts =
-                accountRepository.findByCustomer_CustomerId(customer.getCustomerId());
-
-        if (accounts.isEmpty()) {
-            throw new AccountNotFoundException("No accounts found for customer");
-        }
-
-        List<UUID> accountIds = accounts.stream()
-                .map(Account::getAccountId)
-                .toList();
-
-        List<Transaction> transactions =
-                transactionRepository.findByAccount_AccountIdIn(accountIds);
-
         if (transactions.isEmpty()) {
             throw new TransactionNotFoundException("Transactions not found");
         }
 
-        List<TransactionHistoryDTO> response = new ArrayList<>();
+        List<TransactionHistoryDTO> response = transactions
+                .getContent()
+                .stream()
+                .map(this::toTransactionHistoryDto)
+                .toList();
 
-        for (Transaction transaction : transactions) {
-            response.add(toTransactionHistoryDto(transaction));
-        }
-
-        return response;
+        return new PageResponse<>(
+                response,
+                transactions.getNumber(),
+                transactions.getTotalPages(),
+                transactions.getSize(),
+                transactions.isLast()
+        );
     }
 
     @Override
@@ -278,13 +281,13 @@ public class TransactionServiceImpl implements TransactionService {
         Customer customer = customerRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomerNotFoundException("Customer not found"));
 
+        Account receiverAccount = accountRepository.findByAccountNum(transferRequestDTO.getToAccountNum())
+                .orElseThrow(()->new AccountNotFoundException("Receiver account not found"));
+
         Account senderAccount = accountRepository.findByAccountNumAndCustomer_CustomerId(
                 transferRequestDTO.getFromAccountNum(),
                 customer.getCustomerId()).orElseThrow(()->new AccountNotFoundException("Account not found"));
 
-        Account receiverAccount = accountRepository.findByAccountNumAndCustomer_CustomerId(
-                transferRequestDTO.getToAccountNum(),
-                customer.getCustomerId()).orElseThrow(()->new AccountNotFoundException("Account not found"));
 
         if (!passwordEncoder.matches(transferRequestDTO.getPin(), senderAccount.getPinHash())) {
             throw new WrongPinException("Wrong PIN");
@@ -300,7 +303,7 @@ public class TransactionServiceImpl implements TransactionService {
                 toEntityForTransferDebit(transferRequestDTO, senderAccount, transactionRefId);
 
         Transaction creditTxn =
-                toEntityForTransferCredit(transferRequestDTO, receiverAccount, transactionRefId);
+                toEntityForTransferCredit(transferRequestDTO, receiverAccount,transactionRefId);
 
         transactionRepository.save(debitTxn);
         transactionRepository.save(creditTxn);

@@ -1,6 +1,7 @@
 package com.ritik.customer_microservice.service;
 
 import com.ritik.customer_microservice.dto.transactionDTO.*;
+import com.ritik.customer_microservice.serviceImpl.PageResponse;
 
 import java.util.List;
 
@@ -9,7 +10,7 @@ public interface TransactionService {
 
     TransactionResponseDTO withdrawMoney(String email, WithdrawRequestDTO withdrawRequestDTO);
 
-    List<TransactionHistoryDTO> transactionHistory(String email, Long accountNum);
+    PageResponse<TransactionHistoryDTO> transactionHistory(String email, Long accountNum, int page, int size);
 
     TransferResponseDTO transferMoney(String email, TransferRequestDTO transferRequestDTO);
 }

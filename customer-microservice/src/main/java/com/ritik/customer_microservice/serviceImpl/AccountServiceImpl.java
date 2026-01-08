@@ -66,7 +66,7 @@ public class AccountServiceImpl implements AccountService {
     @Transactional
     public AccountResponseDTO createAccount(String email, CreateAccountDTO dto) {
 
-        List<BankResponseDTO> banks;
+        PageResponse<BankResponseDTO> banks;
 
         try {
             banks = bankClient.getBanks(dto.getIfscCode(), null);
@@ -78,11 +78,11 @@ public class AccountServiceImpl implements AccountService {
             );
         }
 
-        if (banks == null || banks.isEmpty()) {
+        if (banks == null || banks.getData().isEmpty()) {
             throw new BankNotFoundException("Invalid IFSC code");
         }
 
-        Long bankId = banks.get(0).getBankId();
+        Long bankId = banks.getData().get(0).getBankId();
 
         Customer customer = customerRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomerNotFoundException("Customer not found"));

@@ -8,8 +8,11 @@ import com.ritik.customer_microservice.exception.CustomerNotFoundException;
 import com.ritik.customer_microservice.exception.WrongPasswordException;
 import com.ritik.customer_microservice.model.Customer;
 import com.ritik.customer_microservice.model.CustomerSession;
+import com.ritik.customer_microservice.model.Transaction;
 import com.ritik.customer_microservice.repository.CustomerRepository;
 import com.ritik.customer_microservice.repository.CustomerSessionRepository;
+import com.ritik.customer_microservice.serviceImpl.CustomerServiceImpl;
+import com.ritik.customer_microservice.serviceImpl.JwtServiceImpl;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,6 +21,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.math.BigDecimal;
@@ -45,6 +52,7 @@ public class CustomerServiceImplTest {
     private CustomerLoginDTO loginDTO;
     private CustomerUpdateDTO updateDTO;
     private Customer savedCustomer;
+    private Pageable pageable;
 
     @BeforeEach
     void setUp() {
@@ -75,6 +83,10 @@ public class CustomerServiceImplTest {
         savedCustomer.setAadhar(registerDTO.getAadhar());
         savedCustomer.setPasswordHash("encoded-password");
         savedCustomer.setStatus(Status.ACTIVE);
+
+        pageable = PageRequest.of(0, 5);
+
+
     }
 
     @Test
@@ -263,21 +275,33 @@ public class CustomerServiceImplTest {
     }
 
     @Test
-    void shouldThrowExceptionWhenCustomerNotFoundFetchCustomers(){
+    void shouldThrowExceptionWhenCustomerNotFoundFetchCustomers() {
 
-        //Arrange
+        // Arrange
         Long bankId = 1L;
-        BigDecimal minBalance = new BigDecimal(5000);
-        BigDecimal maxBalance = new BigDecimal(8000);
-        Mockito.when(customerRepository.findCustomersByBankIdAndBalance(bankId,minBalance,maxBalance))
-                .thenReturn(Collections.emptyList());
+        BigDecimal minBalance = BigDecimal.valueOf(5000);
+        BigDecimal maxBalance = BigDecimal.valueOf(8000);
 
-        //Act +Assert
-        Assertions.assertThrows(CustomerNotFoundException.class,()->
-                customerService.fetchCustomersByBankIdAndBalance(bankId,minBalance,maxBalance));
 
-        Mockito.verify(customerRepository, Mockito.never()).save(Mockito.any());
+        Mockito.when(customerRepository.findCustomersByBankIdAndBalance(
+                Mockito.eq(bankId),
+                Mockito.eq(minBalance),
+                Mockito.eq(maxBalance),
+                Mockito.any(Pageable.class)))
+                .thenReturn(Page.empty());
+
+        // Act + Assert
+        Assertions.assertThrows(CustomerNotFoundException.class, () ->
+                customerService.fetchCustomersByBankIdAndBalance(bankId, minBalance, maxBalance, 0, 5)
+        );
+
+        // Verify
+        Mockito.verify(customerRepository).findCustomersByBankIdAndBalance(Mockito.eq(bankId),
+                Mockito.eq(minBalance),
+                Mockito.eq(maxBalance),
+                Mockito.any(Pageable.class));
     }
+
 
     @Test
     void shouldFetchCustomersSuccessfully(){
@@ -296,23 +320,33 @@ public class CustomerServiceImplTest {
         List<Object[]> results = new ArrayList<>();
         results.add(new Object[]{customer, balance});
 
-        Mockito.when(customerRepository.findCustomersByBankIdAndBalance(bankId,minBalance,maxBalance))
-                .thenReturn(results);
+        Page<Object[]> pageResult = new PageImpl<>(results, pageable, results.size());
+
+        Mockito.when(customerRepository.findCustomersByBankIdAndBalance(
+                        Mockito.eq(bankId),
+                        Mockito.eq(minBalance),
+                        Mockito.eq(maxBalance),
+                        Mockito.any(Pageable.class)
+                ))
+                .thenReturn(pageResult);
         //Act
-        List<CustomerBalanceDTO> response = customerService
-                .fetchCustomersByBankIdAndBalance(bankId,minBalance,maxBalance);
+        PageResponse<CustomerBalanceDTO> response = customerService
+                .fetchCustomersByBankIdAndBalance(bankId,minBalance,maxBalance,0,5);
 
         //Assert
         Assertions.assertNotNull(response);
-        Assertions.assertEquals(1,response.size());
+        Assertions.assertEquals(1,response.getData().size());
 
-        CustomerBalanceDTO dto = response.get(0);
+        CustomerBalanceDTO dto = response.getData().get(0);
 
         Assertions.assertEquals(customer.getCustomerId(),dto.getCustomerId());
         Assertions.assertEquals(customer.getName(),dto.getName());
         Assertions.assertEquals(customer.getEmail(),dto.getEmail());
         Assertions.assertEquals(balance, dto.getBalance());
 
-        Mockito.verify(customerRepository).findCustomersByBankIdAndBalance(bankId, minBalance, maxBalance);
+        Mockito.verify(customerRepository).findCustomersByBankIdAndBalance(Mockito.eq(bankId),
+                Mockito.eq(minBalance),
+                Mockito.eq(maxBalance),
+                Mockito.any(Pageable.class));
     }
 }

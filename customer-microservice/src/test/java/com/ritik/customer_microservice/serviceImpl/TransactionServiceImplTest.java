@@ -8,6 +8,7 @@ import com.ritik.customer_microservice.model.Transaction;
 import com.ritik.customer_microservice.repository.AccountRepository;
 import com.ritik.customer_microservice.repository.CustomerRepository;
 import com.ritik.customer_microservice.repository.TransactionRepository;
+import com.ritik.customer_microservice.serviceImpl.TransactionServiceImpl;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,6 +17,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.math.BigDecimal;
@@ -46,6 +48,7 @@ class TransactionServiceImplTest {
     private Account senderAccount;
     private Account receiverAccount;
     private TransferRequestDTO transferRequestDTO;
+    private Pageable pageable;
 
     @BeforeEach
     void setUp(){
@@ -84,6 +87,8 @@ class TransactionServiceImplTest {
         receiverAccount = new Account();
         receiverAccount.setAccountId(UUID.randomUUID());
         receiverAccount.setAmount(BigDecimal.valueOf(2000));
+
+        pageable = PageRequest.of(0, 5, Sort.by("createdAt").descending());
 
     }
 
@@ -320,7 +325,7 @@ class TransactionServiceImplTest {
 
         //Act + Assert
         CustomerNotFoundException ex = Assertions.assertThrows(CustomerNotFoundException.class,
-                ()->transactionService.transactionHistory("test@gmail.com",null));
+                ()->transactionService.transactionHistory("test@gmail.com",null,0, 5));
 
         Assertions.assertEquals("Customer not found", ex.getMessage());
 
@@ -339,7 +344,11 @@ class TransactionServiceImplTest {
 
         //Act + Assert
         AccountNotFoundException ex = Assertions.assertThrows(AccountNotFoundException.class,
-                () -> transactionService.transactionHistory("test@gmail.com", 123456789L));
+                () -> transactionService.transactionHistory(
+                        "test@gmail.com",
+                        123456789L,
+                        0,
+                        5));
 
         Assertions.assertEquals("Account not found", ex.getMessage());
 
@@ -348,24 +357,33 @@ class TransactionServiceImplTest {
 
     @Test
     void shouldThrowTransactionNotFoundForAccountWhenAccountNumProvidedInTransactionHistory() {
-        //Arrange
-        Mockito.when(customerRepository.findByEmail("test@gmail.com")).thenReturn(Optional.of(customer));
 
-        Mockito.when(accountRepository
-                        .findByAccountNumAndCustomer_CustomerId(123456789L, customer.getCustomerId()))
-                .thenReturn(Optional.of(account));
+        // Arrange
+        Mockito.when(customerRepository.findByEmail("test@gmail.com"))
+                .thenReturn(Optional.of(customer));
 
-        Mockito.when(transactionRepository.findByAccount_AccountId(account.getAccountId()))
-                .thenReturn(Collections.emptyList());
+        Mockito.when(accountRepository.findByAccountNumAndCustomer_CustomerId(
+                                123456789L, customer.getCustomerId())).thenReturn(Optional.of(account));
 
-        //Act + Assert
-        TransactionNotFoundException ex = Assertions.assertThrows(TransactionNotFoundException.class,
-                () -> transactionService.transactionHistory("test@gmail.com", 123456789L));
+        Page<Transaction> emptyPage = Page.empty(pageable);
+
+        Mockito.when(transactionRepository.findByAccount_AccountId(account.getAccountId(), pageable))
+                .thenReturn(emptyPage);
+
+        // Act + Assert
+        TransactionNotFoundException ex =
+                Assertions.assertThrows(TransactionNotFoundException.class,
+                        () -> transactionService.transactionHistory(
+                                "test@gmail.com",
+                                123456789L,
+                                0,
+                                5
+                        ));
 
         Assertions.assertEquals("Transactions not found", ex.getMessage());
 
         Mockito.verify(transactionRepository, Mockito.never()).save(Mockito.any());
-    }  //---15
+    }
 
     @Test
     void shouldGetTransactionHistoryWhenAccountNumProvided() {
@@ -375,18 +393,20 @@ class TransactionServiceImplTest {
         Mockito.when(accountRepository.findByAccountNumAndCustomer_CustomerId(
                 123456789L, customer.getCustomerId())).thenReturn(Optional.of(account));
 
-        Mockito.when(transactionRepository.findByAccount_AccountId(account.getAccountId()))
-                .thenReturn(List.of(transaction));
+        Page<Transaction> transactionPage = new PageImpl<>(List.of(transaction), pageable, 1);
+
+        Mockito.when(transactionRepository.findByAccount_AccountId(account.getAccountId(),pageable))
+                .thenReturn(transactionPage);
 
         //Act
-        List<TransactionHistoryDTO> response =
-                transactionService.transactionHistory("test@gmail.com", 123456789L);
+        PageResponse<TransactionHistoryDTO> response =
+                transactionService.transactionHistory("test@gmail.com", 123456789L,0,5);
 
         //Assert
         Assertions.assertNotNull(response);
-        Assertions.assertEquals(1, response.size());
+        Assertions.assertEquals(1, response.getData().size());
 
-        Mockito.verify(transactionRepository).findByAccount_AccountId(account.getAccountId());
+        Mockito.verify(transactionRepository).findByAccount_AccountId(account.getAccountId(),pageable);
     }   //------------------------16
 
     @Test
@@ -399,7 +419,7 @@ class TransactionServiceImplTest {
 
         //Act + Assert
         AccountNotFoundException ex = Assertions.assertThrows(AccountNotFoundException.class,
-                () -> transactionService.transactionHistory("test@gmail.com", null));
+                () -> transactionService.transactionHistory("test@gmail.com", null,0,5));
 
         Assertions.assertEquals("No accounts found for customer", ex.getMessage());
 
@@ -416,12 +436,13 @@ class TransactionServiceImplTest {
 
         Mockito.when(accountRepository.findByCustomer_CustomerId(customer.getCustomerId())).thenReturn(List.of(account));
 
-        Mockito.when(transactionRepository.findByAccount_AccountIdIn(List.of(account.getAccountId())))
-                .thenReturn(Collections.emptyList());
+        Page<Transaction> emptyPage = Page.empty();
+        Mockito.when(transactionRepository.findByAccount_AccountIdIn(List.of(account.getAccountId()),pageable))
+                .thenReturn(emptyPage);
 
         // Act + Assert
         TransactionNotFoundException ex = Assertions.assertThrows(TransactionNotFoundException.class,
-                () -> transactionService.transactionHistory("test@gmail.com", null));
+                () -> transactionService.transactionHistory("test@gmail.com", null,0,5));
 
         Assertions.assertEquals("Transactions not found", ex.getMessage());
 
@@ -429,7 +450,7 @@ class TransactionServiceImplTest {
 
         Mockito.verify(accountRepository).findByCustomer_CustomerId(customer.getCustomerId());
 
-        Mockito.verify(transactionRepository).findByAccount_AccountIdIn(List.of(account.getAccountId()));
+        Mockito.verify(transactionRepository).findByAccount_AccountIdIn(List.of(account.getAccountId()),pageable);
 
         Mockito.verify(accountRepository, Mockito.never())
                 .findByAccountNumAndCustomer_CustomerId(Mockito.any(), Mockito.any());
@@ -445,23 +466,25 @@ class TransactionServiceImplTest {
 
         Mockito.when(accountRepository.findByCustomer_CustomerId(customer.getCustomerId())).thenReturn(List.of(account));
 
-        Mockito.when(transactionRepository.findByAccount_AccountIdIn(List.of(account.getAccountId())))
-                .thenReturn(List.of(transaction));
+        Page<Transaction> transactionPage = new PageImpl<>(List.of(transaction), pageable, 1);
+
+        Mockito.when(transactionRepository.findByAccount_AccountIdIn(List.of(account.getAccountId()),pageable))
+                .thenReturn(transactionPage);
 
         // Act
-        List<TransactionHistoryDTO> response = transactionService
-                .transactionHistory("test@gmail.com", null);
+        PageResponse<TransactionHistoryDTO> response = transactionService
+                .transactionHistory("test@gmail.com", null,0,5);
 
         //Assert
         Assertions.assertNotNull(response);
-        Assertions.assertEquals(1, response.size());
+        Assertions.assertEquals(1, response.getData().size());
 
         // Verify correct interactions
         Mockito.verify(customerRepository).findByEmail("test@gmail.com");
 
         Mockito.verify(accountRepository).findByCustomer_CustomerId(customer.getCustomerId());
 
-        Mockito.verify(transactionRepository).findByAccount_AccountIdIn(List.of(account.getAccountId()));
+        Mockito.verify(transactionRepository).findByAccount_AccountIdIn(List.of(account.getAccountId()),pageable);
 
         Mockito.verify(accountRepository, Mockito.never())
                 .findByAccountNumAndCustomer_CustomerId(Mockito.any(), Mockito.any());
@@ -473,13 +496,13 @@ class TransactionServiceImplTest {
         // Arrange
         Mockito.when(customerRepository.findByEmail("test@gmail.com")).thenReturn(Optional.of(customer));
 
+        Mockito.when(accountRepository.findByAccountNum(
+                        transferRequestDTO.getToAccountNum()))
+                .thenReturn(Optional.of(receiverAccount));
+
         Mockito.when(accountRepository.findByAccountNumAndCustomer_CustomerId(
                         transferRequestDTO.getFromAccountNum(), customer.getCustomerId()))
                 .thenReturn(Optional.of(senderAccount));
-
-        Mockito.when(accountRepository.findByAccountNumAndCustomer_CustomerId(
-                transferRequestDTO.getToAccountNum(), customer.getCustomerId()))
-                .thenReturn(Optional.of(receiverAccount));
 
         Mockito.when(passwordEncoder.matches(transferRequestDTO.getPin(), senderAccount.getPinHash()))
                 .thenReturn(true);
@@ -501,8 +524,8 @@ class TransactionServiceImplTest {
         Mockito.verify(accountRepository).findByAccountNumAndCustomer_CustomerId(
                 transferRequestDTO.getFromAccountNum(), customer.getCustomerId());
 
-        Mockito.verify(accountRepository).findByAccountNumAndCustomer_CustomerId(
-                transferRequestDTO.getToAccountNum(), customer.getCustomerId());
+        Mockito.verify(accountRepository).findByAccountNum(
+                transferRequestDTO.getToAccountNum());
 
         Mockito.verify(transactionRepository, Mockito.times(2))
                 .save(Mockito.any(Transaction.class));
@@ -566,6 +589,9 @@ class TransactionServiceImplTest {
     void shouldThrowExceptionWhenSenderAccountNotFoundDuringTransferMoney(){
         //Arrange
         Mockito.when(customerRepository.findByEmail("test@gmail.com")).thenReturn(Optional.ofNullable(customer));
+        Mockito.when(accountRepository.findByAccountNum(
+                        transferRequestDTO.getToAccountNum()))
+                .thenReturn(Optional.of(receiverAccount));
         Mockito.when(accountRepository.findByAccountNumAndCustomer_CustomerId(
                 transferRequestDTO.getFromAccountNum(),customer.getCustomerId()))
                 .thenReturn(Optional.empty());
@@ -583,18 +609,16 @@ class TransactionServiceImplTest {
     void shouldThrowExceptionWhenReceiverAccountNotFoundDuringTransferMoney(){
         //Arrange
         Mockito.when(customerRepository.findByEmail("test@gmail.com")).thenReturn(Optional.ofNullable(customer));
-        Mockito.when(accountRepository.findByAccountNumAndCustomer_CustomerId(
-                        transferRequestDTO.getFromAccountNum(),customer.getCustomerId()))
-                .thenReturn(Optional.ofNullable(senderAccount));
-        Mockito.when(accountRepository.findByAccountNumAndCustomer_CustomerId(
-                        transferRequestDTO.getToAccountNum(),customer.getCustomerId()))
+        Mockito.when(accountRepository.findByAccountNum(
+                        transferRequestDTO.getToAccountNum()))
                 .thenReturn(Optional.empty());
+
 
         //Act + Assert
         AccountNotFoundException ex = Assertions.assertThrows(AccountNotFoundException.class,
                 ()->transactionService.transferMoney("test@gmail.com",transferRequestDTO));
 
-        Assertions.assertEquals("Account not found", ex.getMessage());
+        Assertions.assertEquals("Receiver account not found", ex.getMessage());
 
         Mockito.verify(transactionRepository, Mockito.never()).save(Mockito.any());
     }  //---------26
@@ -608,8 +632,8 @@ class TransactionServiceImplTest {
                 transferRequestDTO.getFromAccountNum(), customer.getCustomerId()))
                 .thenReturn(Optional.of(senderAccount));
 
-        Mockito.when(accountRepository.findByAccountNumAndCustomer_CustomerId(
-                transferRequestDTO.getToAccountNum(), customer.getCustomerId()))
+        Mockito.when(accountRepository.findByAccountNum(
+                transferRequestDTO.getToAccountNum()))
                 .thenReturn(Optional.of(receiverAccount));
 
         Mockito.when(passwordEncoder.matches(
@@ -638,8 +662,8 @@ class TransactionServiceImplTest {
                         transferRequestDTO.getFromAccountNum(), customer.getCustomerId()))
                 .thenReturn(Optional.of(senderAccount));
 
-        Mockito.when(accountRepository.findByAccountNumAndCustomer_CustomerId(
-                        transferRequestDTO.getToAccountNum(), customer.getCustomerId()))
+        Mockito.when(accountRepository.findByAccountNum(
+                        transferRequestDTO.getToAccountNum()))
                 .thenReturn(Optional.of(receiverAccount));
 
         Mockito.when(passwordEncoder.matches(Mockito.any(), Mockito.any())).thenReturn(true);

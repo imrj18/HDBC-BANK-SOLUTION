@@ -12,6 +12,10 @@ import com.ritik.customer_microservice.repository.CustomerRepository;
 import com.ritik.customer_microservice.repository.CustomerSessionRepository;
 import com.ritik.customer_microservice.service.CustomerService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -107,21 +111,22 @@ public class CustomerServiceImpl implements CustomerService {
         customerSessionRepository.findById(customer.getCustomerId())
                 .ifPresent(session -> {
                     if (session.getExpiryTime().isAfter(LocalDateTime.now())) {
-                        throw new AlreadyLoggedInException("Customer already logged in. Token = "+session.getToken());
+                        throw new AlreadyLoggedInException(
+                                "Customer already logged in. Token = " + session.getToken()
+                        );
                     }
                 });
 
         String token = jwtService.generateUserToken(dto.getEmail());
 
-        CustomerSession session = new CustomerSession();
-        session.setCustomerId(customer.getCustomerId());
-        session.setToken(token);
         Date expiryDate = jwtService.extractExpiryTime(token);
-
         LocalDateTime expiryTime = expiryDate.toInstant()
                 .atZone(ZoneId.systemDefault())
                 .toLocalDateTime();
 
+        CustomerSession session = new CustomerSession();
+        session.setCustomer(customer);
+        session.setToken(token);
         session.setExpiryTime(expiryTime);
         session.setLastActivityTime(LocalDateTime.now());
 
@@ -142,6 +147,9 @@ public class CustomerServiceImpl implements CustomerService {
     public CustomerResponseDTO updateProfile(String email, CustomerUpdateDTO updateDTO) {
         Customer customer = customerRepository.findByEmail(email).orElseThrow(() ->
                 new CustomerNotFoundException("Customer not found."));
+        if(customerRepository.existsByPhone(updateDTO.getPhone())){
+            throw new CustomerAlreadyExistsException("Phone number already exists!");
+        }
         customer.setName(updateDTO.getName());
         customer.setPhone(updateDTO.getPhone());
         customer.setAddress(updateDTO.getAddress());
@@ -151,25 +159,33 @@ public class CustomerServiceImpl implements CustomerService {
 
 
     @Override
-    public List<CustomerBalanceDTO> fetchCustomersByBankIdAndBalance(
+    public PageResponse<CustomerBalanceDTO> fetchCustomersByBankIdAndBalance(
             Long bankId,
             BigDecimal minBalance,
-            BigDecimal maxBalance) {
+            BigDecimal maxBalance,
+            int page,
+            int size) {
 
-        List<Object[]> results = customerRepository
-                .findCustomersByBankIdAndBalance(bankId, minBalance, maxBalance);
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by("createdAt").descending()
+        );
+
+        Page<Object[]> results = customerRepository
+                .findCustomersByBankIdAndBalance(bankId, minBalance, maxBalance,pageable);
 
         if (results.isEmpty()) {
             throw new CustomerNotFoundException("No customers found");
         }
 
-        List<CustomerBalanceDTO> response = new ArrayList<>();
+        List<CustomerBalanceDTO> data = new ArrayList<>();
 
-        for (Object[] row : results) {
+        for (Object[] row : results.getContent()) {
             Customer customer = (Customer) row[0];
             BigDecimal balance = (BigDecimal) row[1];
 
-            response.add(new CustomerBalanceDTO(
+            data.add(new CustomerBalanceDTO(
                     customer.getCustomerId(),
                     customer.getName(),
                     customer.getEmail(),
@@ -177,6 +193,12 @@ public class CustomerServiceImpl implements CustomerService {
             ));
         }
 
-        return response;
+        return new PageResponse<>(
+                data,
+                results.getNumber(),
+                results.getTotalPages(),
+                results.getTotalElements(),
+                results.isLast()
+        );
     }
 }

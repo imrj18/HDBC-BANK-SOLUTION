@@ -21,9 +21,7 @@ public class InternalApiKeyFilter extends OncePerRequestFilter {
     private String expectedKey;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain)
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
         if (!request.getRequestURI().startsWith("/internal/")) {
@@ -39,9 +37,7 @@ public class InternalApiKeyFilter extends OncePerRequestFilter {
         }
 
         UsernamePasswordAuthenticationToken auth =
-                new UsernamePasswordAuthenticationToken(
-                        "BANK_MICROSERVICE",
-                        null,
+                new UsernamePasswordAuthenticationToken("BANK_MICROSERVICE", null,
                         List.of(new SimpleGrantedAuthority("ROLE_SERVICE"))
                 );
 

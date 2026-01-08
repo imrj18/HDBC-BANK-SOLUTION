@@ -14,6 +14,8 @@ import com.ritik.customer_microservice.model.Account;
 import com.ritik.customer_microservice.model.Customer;
 import com.ritik.customer_microservice.repository.AccountRepository;
 import com.ritik.customer_microservice.repository.CustomerRepository;
+import com.ritik.customer_microservice.serviceImpl.AccountServiceImpl;
+import com.ritik.customer_microservice.serviceImpl.GenerateAccountNumber;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,7 +30,7 @@ import java.math.BigDecimal;
 import java.util.*;
 
 @ExtendWith(MockitoExtension.class)
-public class AccountServiceImplTest {
+class AccountServiceImplTest {
 
     @Mock
     private AccountRepository accountRepository;
@@ -74,7 +76,12 @@ public class AccountServiceImplTest {
     @Test
     void shouldThrowExceptionWhenBankNotFoundDuringCreateAccount() {
         //Arrange
-        Mockito.when(bankClient.getBanks(Mockito.anyString(), Mockito.isNull())).thenReturn(Collections.emptyList());
+        Mockito.when(bankClient.getBanks(Mockito.anyString(), Mockito.isNull())).thenReturn(new PageResponse<>(
+                Collections.emptyList(),
+                0,
+                1,
+                5,
+                true));
 
         //Act + Assert
         BankNotFoundException ex = Assertions.assertThrows(BankNotFoundException.class,
@@ -93,7 +100,9 @@ public class AccountServiceImplTest {
         BankResponseDTO bank = new BankResponseDTO();
         bank.setBankId(1L);
 
-        Mockito.when(bankClient.getBanks(Mockito.anyString(), Mockito.isNull())).thenReturn(List.of(bank));
+        Mockito.when(bankClient.getBanks(Mockito.anyString(), Mockito.isNull())).thenReturn(new PageResponse<>(
+                List.of(bank),0,1,5,true
+        ));
 
         Mockito.when(customerRepository.findByEmail("test@example.com")).thenReturn(Optional.of(customer));
 
@@ -148,7 +157,9 @@ public class AccountServiceImplTest {
         BankResponseDTO bank = new BankResponseDTO();
         bank.setBankId(1L);
 
-        Mockito.when(bankClient.getBanks(Mockito.anyString(), Mockito.isNull())).thenReturn(List.of(bank));
+        Mockito.when(bankClient.getBanks(Mockito.anyString(), Mockito.isNull())).thenReturn(new PageResponse<>(
+                List.of(bank),0,1,5,true
+        ));
 
         Mockito.when(customerRepository.findByEmail("test@example.com")).thenReturn(Optional.empty());
 
