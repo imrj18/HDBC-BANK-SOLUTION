@@ -241,7 +241,6 @@ class AccountServiceImplTest {
         // Assert
         Assertions.assertNotNull(response);
         Assertions.assertEquals(1, response.size());
-        Assertions.assertEquals(account.getAccountId(), response.get(0).getAccountId());
         Assertions.assertEquals(account.getAccountNum(), response.get(0).getAccountNum());
 
         Mockito.verify(customerRepository).findByEmail("test@example.com");
@@ -289,7 +288,6 @@ class AccountServiceImplTest {
         // Assert
         Assertions.assertNotNull(response);
         Assertions.assertEquals(1, response.size());
-        Assertions.assertEquals(account.getAccountId(), response.get(0).getAccountId());
         Assertions.assertEquals(account.getAccountNum(), response.get(0).getAccountNum());
 
         Mockito.verify(customerRepository).findByEmail("test@example.com");

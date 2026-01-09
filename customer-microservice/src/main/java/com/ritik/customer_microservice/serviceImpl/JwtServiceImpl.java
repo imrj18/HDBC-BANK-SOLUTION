@@ -24,7 +24,7 @@ public class JwtServiceImpl {
 
     public String generateUserToken(String email) {
         return Jwts.builder()
-                .subject(email)
+                .subject(email.toLowerCase())
                 .claim("type", "USER")
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + 10 * 60 * 1000)) // 10 min

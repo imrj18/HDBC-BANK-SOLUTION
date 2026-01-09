@@ -23,7 +23,6 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -171,7 +170,6 @@ public class TransactionServiceImpl implements TransactionService {
         Account account = accountRepository.findByAccountNumAndCustomer_CustomerId(
                 depositRequestDTO.getAccountNum(),
                 customer.getCustomerId()).orElseThrow(()->new AccountNotFoundException("Account not found"));
-        //account.setAmount(account.getAmount().add(depositRequestDTO.getAmount()));
         Transaction transaction = toEntityForDeposit(depositRequestDTO,account);
         transactionRepository.save(transaction);
 
@@ -198,20 +196,11 @@ public class TransactionServiceImpl implements TransactionService {
         if (account.getAmount().compareTo(withdrawRequestDTO.getAmount()) < 0) {
             throw new InsufficientBalanceException("Insufficient balance");
         }
-        //account.setAmount(account.getAmount().subtract(withdrawRequestDTO.getAmount()));
         Transaction transaction = toEntityForWithdraw(withdrawRequestDTO,account);
         transactionRepository.save(transaction);
 
         return toDto(transaction);
     }
-
-    //Customer not found
-    //account num provided and account not found
-    //account num provided and transaction not found
-    //account num provided and successfully transaction history
-    //account num not provided and account not found
-    //account num not provided and transaction not found
-    //account num not provided and successfully transaction history
 
     @Override
     public PageResponse<TransactionHistoryDTO> transactionHistory(String email, Long accountNum, int page, int size) {

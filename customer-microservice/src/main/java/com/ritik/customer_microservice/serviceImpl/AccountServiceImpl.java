@@ -38,7 +38,6 @@ public class AccountServiceImpl implements AccountService {
 
         AccountResponseDTO dto = new AccountResponseDTO();
 
-        dto.setAccountId(account.getAccountId());
         dto.setAccountNum(account.getAccountNum());
         dto.setBankId(account.getBankId());
         dto.setAccountType(account.getAccountType());

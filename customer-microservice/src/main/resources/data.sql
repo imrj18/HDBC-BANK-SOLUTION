@@ -11,39 +11,38 @@ INSERT INTO customers (
     address
 ) VALUES
       (
-          UNHEX(REPLACE('c0a8015e-7a2b-4c4f-9a01-44bafedb61e2', '-', '')),
-          'Ritik Sharma',
-          'ritikS@example.com',
-          '9876543210',
-          '123412341234',
-
+          UNHEX(REPLACE('11111111-1111-1111-1111-111111111111', '-', '')),
+          'Demo User One',
+          'user1@example.com',
+          '9000000001',
+          '111122223333',
           'ACTIVE',
-          '$2a$12$WlLSd1kkwie9tgE8To7gO.SBUZFrG7PRI3B6T0aWENr92wPdhTJ56', -- bcrypt dummy //R@123
+          '$2a$10$7EqJtq98hPqEX7fNZaFWoOHiF0o8aE4fP6Z6FzYFJqZcZ5tR0ZpLa', --//123456
           NOW(),
           NOW(),
-          "HIG-259,Kunti Vihar, Shanti Nagar, Bhilai, Durg, Chhattisgarh"
+          'Demo Address Line 1, Demo City, Demo State'
       ),
       (
-          UNHEX(REPLACE('9d6b8a7f-3c2e-4b0d-9a1f-7f2c5d4f1a9b', '-', '')),
-          'Ritik Sharma',
-          'ritik1@example.com',
-          '9123456789',
-          '567856785678',
+          UNHEX(REPLACE('22222222-2222-2222-2222-222222222222', '-', '')),
+          'Demo User Two',
+          'user2@example.com',
+          '9000000002',
+          '444455556666',
           'ACTIVE',
-          '$2a$12$WlLSd1kkwie9tgE8To7gO.SBUZFrG7PRI3B6T0aWENr92wPdhTJ56',
+          '$2a$10$7EqJtq98hPqEX7fNZaFWoOHiF0o8aE4fP6Z6FzYFJqZcZ5tR0ZpLa',
           NOW(),
           NOW(),
-          "HIG-259,Kunti Vihar, Shanti Nagar, Bhilai, Durg, Chhattisgarh"
+          'Demo Address Line 2, Demo City, Demo State'
       ),
       (
-          UNHEX(REPLACE('9d6b8a7f-3c2e-4b0d-9a1f-7e2c5d4f1a9b', '-', '')),
-          'Amit Sharma',
-          'amit@example.com',
-          '9123456779',
-          '567856785679',
+          UNHEX(REPLACE('33333333-3333-3333-3333-333333333333', '-', '')),
+          'Demo User Three',
+          'user3@example.com',
+          '9000000003',
+          '777788889999',
           'ACTIVE',
-          '$2a$10$D86mddrmfdbGVH5HK4t2B.xrajz2ISl.G24JAMgrzH2pg6aCoyMeW',
+          '$2a$10$7EqJtq98hPqEX7fNZaFWoOHiF0o8aE4fP6Z6FzYFJqZcZ5tR0ZpLa',
           NOW(),
           NOW(),
-          "HIG-269,Kunti Vihar, Shanti Nagar, Bhilai, Durg, Chhattisgarh"
+          'Demo Address Line 3, Demo City, Demo State'
       );

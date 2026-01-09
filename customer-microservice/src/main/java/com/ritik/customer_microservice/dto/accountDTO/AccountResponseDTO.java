@@ -15,9 +15,6 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 public class AccountResponseDTO {
-
-    private UUID accountId;
-
     private Long accountNum;
 
     private AccountType accountType;

@@ -43,8 +43,6 @@ public class CustomerServiceImpl implements CustomerService {
 
         CustomerResponseDTO dto = new CustomerResponseDTO();
 
-        dto.setCustomerId(customer.getCustomerId().toString());
-
         dto.setName(customer.getName());
         dto.setEmail(customer.getEmail());
         dto.setPhone(customer.getPhone());

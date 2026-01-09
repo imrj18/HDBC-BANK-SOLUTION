@@ -8,8 +8,6 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 public class CustomerResponseDTO {
-    private String customerId;
-
     private String name;
     private String email;
     private String phone;

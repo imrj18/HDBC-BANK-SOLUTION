@@ -57,7 +57,6 @@ class CustomerControllerTest {
         registerDTO.setEmail("jd@gmail.com");
 
         responseDTO = new CustomerResponseDTO();
-        responseDTO.setCustomerId(UUID.randomUUID().toString());
         responseDTO.setName("John Doe");
         responseDTO.setEmail("jd@gmail.com");
         responseDTO.setPhone("9876543210");
@@ -82,7 +81,6 @@ class CustomerControllerTest {
         // Act + Assert
         mockMvc.perform(post("/api/customers/register").contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(registerDTO)))
-                .andExpect(jsonPath("$.customerId").exists())
                 .andExpect(jsonPath("$.name").value("John Doe"))
                 .andExpect(jsonPath("$.email").value("jd@gmail.com"))
                 .andExpect(jsonPath("$.phone").value("9876543210"));

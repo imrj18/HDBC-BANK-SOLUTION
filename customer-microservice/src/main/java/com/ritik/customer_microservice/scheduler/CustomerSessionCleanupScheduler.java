@@ -14,7 +14,7 @@ public class CustomerSessionCleanupScheduler {
     private final CustomerSessionRepository customerSessionRepository;
 
     // 5 minutes
-    @Scheduled(fixedRate = 120000)
+    @Scheduled(fixedRate = 60000)
     public void cleanupExpiredAndInactiveSessions() {
 
         LocalDateTime now = LocalDateTime.now();

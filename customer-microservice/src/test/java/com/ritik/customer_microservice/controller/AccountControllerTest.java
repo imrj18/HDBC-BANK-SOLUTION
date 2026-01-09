@@ -59,7 +59,6 @@ class AccountControllerTest {
         accountDTO.setPin("1234");
 
         responseDTO = new AccountResponseDTO();
-        responseDTO.setAccountId(UUID.randomUUID());
         responseDTO.setAccountNum(12345678901L);
         responseDTO.setAccountStatus(Status.ACTIVE);
         responseDTO.setBankId(1L);
