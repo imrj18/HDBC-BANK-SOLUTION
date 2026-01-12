@@ -108,7 +108,6 @@ public class BankServiceImpl implements BankService {
 
         Bank bank = repository.findByIfscCode(ifsc).orElseThrow(() -> new BankNotFoundException("Invalid IFSC"));
 
-
         PageResponse<CustomerBalanceDTO> customers;
 
         try {
