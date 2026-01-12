@@ -106,8 +106,7 @@ public class BankServiceImpl implements BankService {
                                                        int page,
                                                        int size) {
 
-        Bank bank = repository.findByIfscCode(ifsc)
-                .orElseThrow(() -> new BankNotFoundException("Invalid IFSC"));
+        Bank bank = repository.findByIfscCode(ifsc).orElseThrow(() -> new BankNotFoundException("Invalid IFSC"));
 
 
         PageResponse<CustomerBalanceDTO> customers;

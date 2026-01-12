@@ -13,12 +13,12 @@ public class CustomerSessionCleanupScheduler {
 
     private final CustomerSessionRepository customerSessionRepository;
 
-    // 5 minutes
+    // 1 minutes
     @Scheduled(fixedRate = 60000)
     public void cleanupExpiredAndInactiveSessions() {
 
         LocalDateTime now = LocalDateTime.now();
 
-        customerSessionRepository.deleteExpiredOrInactiveSessions(now, now.minusMinutes(4));
+        customerSessionRepository.deleteExpiredOrInactiveSessions(now, now.minusMinutes(3));
     }
 }
