@@ -3,7 +3,6 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/HDBC BANKING SOLUTION.iml" filepath="$PROJECT_DIR$/.idea/HDBC BANKING SOLUTION.iml" />
-      <module fileurl="file://$PROJECT_DIR$/bank-microservice/bank-microservice.iml" filepath="$PROJECT_DIR$/bank-microservice/bank-microservice.iml" />
     </modules>
   </component>
 </project>

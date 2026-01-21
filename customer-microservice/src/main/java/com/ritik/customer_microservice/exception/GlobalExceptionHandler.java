@@ -47,6 +47,13 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(ex.getMessage(),"BAD_REQUEST", 400));
     }
 
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<ErrorResponse> handleBadRequest(BadRequestException ex) {
+        log.warn("Unauthorized error: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(ex.getMessage(),"BAD_REQUEST", 400));
+    }
+
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<ErrorResponse> handleUnauthorized(UnauthorizedException ex) {
         log.warn("Unauthorized error: {}", ex.getMessage());
@@ -138,6 +145,13 @@ public class GlobalExceptionHandler {
         error.put("error", "Invalid JSON request");
 
         return ResponseEntity.badRequest().body(error);
+    }
+
+    @ExceptionHandler(TransactionAlreadyProcessedException.class)
+    public ResponseEntity<ErrorResponse> handleTransactionAlreadyProcessed(TransactionAlreadyProcessedException ex){
+        log.warn("Transaction already processed: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(ex.getMessage(),"CONFLICT", 409));
     }
 
     @ExceptionHandler(Exception.class)

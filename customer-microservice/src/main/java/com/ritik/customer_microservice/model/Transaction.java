@@ -46,7 +46,7 @@ public class Transaction {
     @Column(nullable = false)
     private BigDecimal amount;
 
-    @Column(name = "closing_balance", nullable = false)
+    @Column(name = "closing_balance")
     private BigDecimal closingBalance;
 
     @Enumerated(EnumType.STRING)

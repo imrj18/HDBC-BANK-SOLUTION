@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 
 @Getter
 @Setter
+@RequiredArgsConstructor
 public class TransferRequestDTO {
 
     @NotNull
@@ -26,4 +27,10 @@ public class TransferRequestDTO {
     @NotBlank
     @Size(min = 4, max = 4, message = "PIN must be exactly 4 digits")
     private String pin;
+
+    public TransferRequestDTO(Long counterpartyAccountNum, Long accountNum, BigDecimal amount) {
+        this.toAccountNum = counterpartyAccountNum;
+        this.fromAccountNum = accountNum;
+        this.amount = amount;
+    }
 }

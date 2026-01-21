@@ -11,6 +11,7 @@ import com.ritik.customer_microservice.model.Transaction;
 import com.ritik.customer_microservice.repository.AccountRepository;
 import com.ritik.customer_microservice.repository.CustomerRepository;
 import com.ritik.customer_microservice.repository.TransactionRepository;
+import com.ritik.customer_microservice.service.OtpService;
 import com.ritik.customer_microservice.service.TransactionService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.nio.file.AccessDeniedException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -36,6 +38,8 @@ public class TransactionServiceImpl implements TransactionService {
     private final AccountRepository accountRepository;
 
     private final PasswordEncoder passwordEncoder;
+
+    private final OtpService otpService;
 
     private Transaction toEntityForDeposit(DepositRequestDTO dto, Account account) {
 
@@ -63,9 +67,6 @@ public class TransactionServiceImpl implements TransactionService {
 
     private Transaction toEntityForWithdraw(WithdrawRequestDTO dto, Account account) {
 
-        BigDecimal newBalance = account.getAmount().subtract(dto.getAmount());
-        account.setAmount(newBalance);
-
         Transaction transaction = new Transaction();
         transaction.setAccount(account);
         transaction.setAccountNum(account.getAccountNum());
@@ -75,8 +76,7 @@ public class TransactionServiceImpl implements TransactionService {
         transaction.setTransactionType(TransactionType.DEBIT);
 
         transaction.setAmount(dto.getAmount());
-        transaction.setClosingBalance(newBalance);
-        transaction.setTransactionStatus(TransactionStatus.SUCCESS);
+        transaction.setTransactionStatus(TransactionStatus.PENDING);
 
         transaction.setTransactionReferenceId(null);
         transaction.setCounterpartyAccountNum(null);
@@ -114,9 +114,6 @@ public class TransactionServiceImpl implements TransactionService {
 
     private Transaction toEntityForTransferDebit(TransferRequestDTO dto, Account sender, UUID transactionRefId) {
 
-        BigDecimal newBalance = sender.getAmount().subtract(dto.getAmount());
-        sender.setAmount(newBalance);
-
         Transaction transaction = new Transaction();
         transaction.setAccount(sender);
         transaction.setAccountNum(sender.getAccountNum());
@@ -126,8 +123,8 @@ public class TransactionServiceImpl implements TransactionService {
         transaction.setTransactionType(TransactionType.DEBIT);
 
         transaction.setAmount(dto.getAmount());
-        transaction.setClosingBalance(newBalance);
-        transaction.setTransactionStatus(TransactionStatus.SUCCESS);
+        transaction.setClosingBalance(null);
+        transaction.setTransactionStatus(TransactionStatus.PENDING);
 
         transaction.setTransactionReferenceId(transactionRefId);
         transaction.setCounterpartyAccountNum(dto.getToAccountNum());
@@ -158,6 +155,16 @@ public class TransactionServiceImpl implements TransactionService {
         return transaction;
     }
 
+    private Customer checkCustomer(String email){
+        return customerRepository.findByEmail(email).orElseThrow(()->
+                new CustomerNotFoundException("Customer not found"));
+    }
+
+    private Account checkAccount(Long accountNum, UUID customerId){
+        return accountRepository.findByAccountNumAndCustomer_CustomerId(
+                accountNum, customerId).orElseThrow(()->new AccountNotFoundException("Account not found"));
+    }
+
     @Override
     @Transactional
     public TransactionResponseDTO depositMoney(String email, DepositRequestDTO depositRequestDTO){
@@ -165,11 +172,8 @@ public class TransactionServiceImpl implements TransactionService {
             throw new InvalidAmountException("Deposit amount must be greater than zero");
         }
 
-        Customer customer = customerRepository.findByEmail(email).orElseThrow(()->
-                new CustomerNotFoundException("Customer not found"));
-        Account account = accountRepository.findByAccountNumAndCustomer_CustomerId(
-                depositRequestDTO.getAccountNum(),
-                customer.getCustomerId()).orElseThrow(()->new AccountNotFoundException("Account not found"));
+        Customer customer = checkCustomer(email);
+        Account account = checkAccount(depositRequestDTO.getAccountNum(), customer.getCustomerId());
         Transaction transaction = toEntityForDeposit(depositRequestDTO,account);
         transactionRepository.save(transaction);
 
@@ -182,12 +186,10 @@ public class TransactionServiceImpl implements TransactionService {
         if (withdrawRequestDTO.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new InvalidAmountException("Withdraw amount must be greater than zero");
         }
-        Customer customer = customerRepository.findByEmail(email).orElseThrow(()->
-                new CustomerNotFoundException("Customer not found"));
 
-        Account account = accountRepository.findByAccountNumAndCustomer_CustomerId(
-                withdrawRequestDTO.getAccountNum(),
-                customer.getCustomerId()).orElseThrow(()->new AccountNotFoundException("Account not found"));
+        Customer customer = checkCustomer(email);
+
+        Account account = checkAccount(withdrawRequestDTO.getAccountNum(), customer.getCustomerId());
 
         if(!passwordEncoder.matches(withdrawRequestDTO.getPin(), account.getPinHash())){
             throw new WrongPinException("Wrong pin");
@@ -196,8 +198,11 @@ public class TransactionServiceImpl implements TransactionService {
         if (account.getAmount().compareTo(withdrawRequestDTO.getAmount()) < 0) {
             throw new InsufficientBalanceException("Insufficient balance");
         }
+
         Transaction transaction = toEntityForWithdraw(withdrawRequestDTO,account);
+        transaction.setTransactionStatus(TransactionStatus.PENDING);
         transactionRepository.save(transaction);
+        otpService.sendOtp(email, transaction.getTransactionId());
 
         return toDto(transaction);
     }
@@ -211,17 +216,13 @@ public class TransactionServiceImpl implements TransactionService {
                 Sort.by("createdAt").descending()
         );
 
-        Customer customer = customerRepository.findByEmail(email)
-                .orElseThrow(() -> new CustomerNotFoundException("Customer not found"));
+        Customer customer = checkCustomer(email);
 
         Page<Transaction> transactions;
 
         if (accountNum != null) {
 
-            Account account = accountRepository
-                    .findByAccountNumAndCustomer_CustomerId(accountNum, customer.getCustomerId())
-                    .orElseThrow(() ->
-                            new AccountNotFoundException("Account not found"));
+            Account account = checkAccount(accountNum, customer.getCustomerId());
 
             transactions = transactionRepository.findByAccount_AccountId(account.getAccountId(), pageable);
 
@@ -267,15 +268,12 @@ public class TransactionServiceImpl implements TransactionService {
             throw new IllegalArgumentException("Sender and receiver accounts cannot be same");
         }
 
-        Customer customer = customerRepository.findByEmail(email)
-                .orElseThrow(() -> new CustomerNotFoundException("Customer not found"));
+        Customer customer = checkCustomer(email);
 
-        Account receiverAccount = accountRepository.findByAccountNum(transferRequestDTO.getToAccountNum())
+        accountRepository.findByAccountNum(transferRequestDTO.getToAccountNum())
                 .orElseThrow(()->new AccountNotFoundException("Receiver account not found"));
 
-        Account senderAccount = accountRepository.findByAccountNumAndCustomer_CustomerId(
-                transferRequestDTO.getFromAccountNum(),
-                customer.getCustomerId()).orElseThrow(()->new AccountNotFoundException("Account not found"));
+        Account senderAccount = checkAccount(transferRequestDTO.getFromAccountNum(), customer.getCustomerId());
 
 
         if (!passwordEncoder.matches(transferRequestDTO.getPin(), senderAccount.getPinHash())) {
@@ -288,17 +286,15 @@ public class TransactionServiceImpl implements TransactionService {
 
         UUID transactionRefId = UUID.randomUUID();
 
-        Transaction debitTxn =
-                toEntityForTransferDebit(transferRequestDTO, senderAccount, transactionRefId);
 
-        Transaction creditTxn =
-                toEntityForTransferCredit(transferRequestDTO, receiverAccount,transactionRefId);
-
+        Transaction debitTxn = toEntityForTransferDebit(transferRequestDTO,senderAccount, transactionRefId);
         transactionRepository.save(debitTxn);
-        transactionRepository.save(creditTxn);
+        otpService.sendOtp(email, debitTxn.getTransactionId());
+
 
         return TransferResponseDTO.builder()
-                .status("SUCCESS")
+                .transactionId(debitTxn.getTransactionId())
+                .status("PENDING")
                 .message("Transfer completed successfully")
                 .transactionReferenceId(transactionRefId)
                 .fromAccountNum(transferRequestDTO.getFromAccountNum())
@@ -309,4 +305,57 @@ public class TransactionServiceImpl implements TransactionService {
                 .build();
 
     }
+
+    @Transactional
+    @Override
+    public TransactionResponseDTO transactionConfirm(
+            String email, ConfirmRequestDTO dto) throws AccessDeniedException {
+
+        Transaction debitTx = transactionRepository
+                .findByTransactionId(dto.getTransactionId())
+                .orElseThrow(() -> new TransactionNotFoundException("Transaction not found"));
+
+        if (debitTx.getTransactionStatus() != TransactionStatus.PENDING) {
+            throw new TransactionAlreadyProcessedException("Transaction already processed");
+        }
+
+        if (!debitTx.getAccount().getCustomer().getEmail().equals(email)) {
+            throw new UnauthorizedException("Unauthorized");
+        }
+
+        otpService.verifyOtp(email, dto.getTransactionId(), dto.getOTP());
+
+        Account sender = debitTx.getAccount();
+
+        sender.setAmount(sender.getAmount().subtract(debitTx.getAmount()));
+        accountRepository.save(sender);
+
+        debitTx.setTransactionStatus(TransactionStatus.SUCCESS);
+        debitTx.setClosingBalance(sender.getAmount());
+        transactionRepository.save(debitTx);
+
+        if (debitTx.getOperationType() == OperationType.TRANSFER) {
+
+            Account receiver = accountRepository
+                    .findByAccountNum(debitTx.getCounterpartyAccountNum())
+                    .orElseThrow(() -> new AccountNotFoundException("Receiver not found"));
+
+            Transaction creditTx =
+                    toEntityForTransferCredit(
+                            new TransferRequestDTO(
+                                    debitTx.getCounterpartyAccountNum(),
+                                    debitTx.getAccountNum(),
+                                    debitTx.getAmount()
+                            ),
+                            receiver,
+                            debitTx.getTransactionReferenceId()
+                    );
+
+            transactionRepository.save(creditTx);
+        }
+
+        return toDto(debitTx);
+    }
+
+
 }

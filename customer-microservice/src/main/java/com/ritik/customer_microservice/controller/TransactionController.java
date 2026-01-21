@@ -2,6 +2,7 @@ package com.ritik.customer_microservice.controller;
 
 import com.ritik.customer_microservice.dto.transactionDTO.*;
 import com.ritik.customer_microservice.model.CustomerPrincipal;
+import com.ritik.customer_microservice.service.OtpService;
 import com.ritik.customer_microservice.service.TransactionService;
 import com.ritik.customer_microservice.serviceImpl.PageResponse;
 import jakarta.validation.Valid;
@@ -15,6 +16,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.file.AccessDeniedException;
 import java.util.List;
 
 @Slf4j
@@ -25,6 +27,7 @@ import java.util.List;
 public class TransactionController {
 
     private final TransactionService transactionService;
+    private final OtpService otpService;
 
     @PostMapping("/deposit")
     public ResponseEntity<TransactionResponseDTO> depositMoney(
@@ -82,4 +85,19 @@ public class TransactionController {
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .body(transactionService.transferMoney(email, transferRequestDTO));
     }
+
+
+    @PostMapping("/confirm-transaction")
+    public ResponseEntity<TransactionResponseDTO> confirmTransaction(
+            @AuthenticationPrincipal CustomerPrincipal principal,
+            @Valid @RequestBody ConfirmRequestDTO confirmRequestDTO) throws AccessDeniedException {
+
+        String email = principal.getUsername();
+        log.info("API call: CONFIRM TRANSACTION MONEY | user={}", email);
+
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body(transactionService.transactionConfirm(email, confirmRequestDTO));
+    }
+
+
 }

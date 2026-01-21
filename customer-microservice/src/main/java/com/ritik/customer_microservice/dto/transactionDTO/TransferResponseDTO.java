@@ -13,6 +13,8 @@ import java.util.UUID;
 @Builder
 public class TransferResponseDTO {
 
+    private UUID transactionId;
+
     private String status;
     private String message;
 
