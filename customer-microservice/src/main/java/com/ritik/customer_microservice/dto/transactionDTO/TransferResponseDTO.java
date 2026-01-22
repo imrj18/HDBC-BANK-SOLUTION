@@ -1,5 +1,7 @@
 package com.ritik.customer_microservice.dto.transactionDTO;
 
+import com.ritik.customer_microservice.enums.TransactionStatus;
+import com.ritik.customer_microservice.model.Transaction;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -15,7 +17,7 @@ public class TransferResponseDTO {
 
     private UUID transactionId;
 
-    private String status;
+    private TransactionStatus status;
     private String message;
 
     private UUID transactionReferenceId;

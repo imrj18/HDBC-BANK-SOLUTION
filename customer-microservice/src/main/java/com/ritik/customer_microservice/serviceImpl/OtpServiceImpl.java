@@ -27,7 +27,7 @@ public class OtpServiceImpl implements OtpService {
     }
 
     @Override
-    public String sendOtp(String email, UUID transactionId) {
+    public void sendOtp(String email, UUID transactionId) {
         String otp = generateOtp();
 
         OtpVerification verification = new OtpVerification();
@@ -40,7 +40,6 @@ public class OtpServiceImpl implements OtpService {
         verification.setAttemptCount((byte) 0);
         otpRepository.save(verification);
         emailService.sendMail(email, "OTP Verification", "Your OTP is: "+ otp + "(valid for 5 minutes)");
-        return otp;
     }
 
     @Override

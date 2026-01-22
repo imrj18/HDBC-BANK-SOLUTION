@@ -294,7 +294,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         return TransferResponseDTO.builder()
                 .transactionId(debitTxn.getTransactionId())
-                .status("PENDING")
+                .status(TransactionStatus.PENDING)
                 .message("Transfer completed successfully")
                 .transactionReferenceId(transactionRefId)
                 .fromAccountNum(transferRequestDTO.getFromAccountNum())
@@ -308,8 +308,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Transactional
     @Override
-    public TransactionResponseDTO transactionConfirm(
-            String email, ConfirmRequestDTO dto) throws AccessDeniedException {
+    public TransactionResponseDTO transactionConfirm(String email, ConfirmRequestDTO dto){
 
         Transaction debitTx = transactionRepository
                 .findByTransactionId(dto.getTransactionId())
@@ -356,6 +355,5 @@ public class TransactionServiceImpl implements TransactionService {
 
         return toDto(debitTx);
     }
-
 
 }

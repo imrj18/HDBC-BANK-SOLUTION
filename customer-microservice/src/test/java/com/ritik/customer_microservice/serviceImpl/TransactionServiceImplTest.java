@@ -1,6 +1,8 @@
 package com.ritik.customer_microservice.serviceImpl;
 
 import com.ritik.customer_microservice.dto.transactionDTO.*;
+import com.ritik.customer_microservice.enums.OperationType;
+import com.ritik.customer_microservice.enums.TransactionStatus;
 import com.ritik.customer_microservice.exception.*;
 import com.ritik.customer_microservice.model.Account;
 import com.ritik.customer_microservice.model.Customer;
@@ -40,6 +42,9 @@ class TransactionServiceImplTest {
     @InjectMocks
     private TransactionServiceImpl transactionService;
 
+    @Mock
+    private OtpServiceImpl otpService;
+
     private DepositRequestDTO depositRequestDTO;
     private WithdrawRequestDTO withdrawRequestDTO;
     private Customer customer;
@@ -49,6 +54,7 @@ class TransactionServiceImplTest {
     private Account receiverAccount;
     private TransferRequestDTO transferRequestDTO;
     private Pageable pageable;
+    private ConfirmRequestDTO confirmRequestDTO;
 
     @BeforeEach
     void setUp(){
@@ -89,6 +95,10 @@ class TransactionServiceImplTest {
         receiverAccount.setAmount(BigDecimal.valueOf(2000));
 
         pageable = PageRequest.of(0, 5, Sort.by("createdAt").descending());
+
+        confirmRequestDTO = new ConfirmRequestDTO();
+        confirmRequestDTO.setTransactionId(transaction.getTransactionId());
+        confirmRequestDTO.setOTP("0000");
 
     }
 
@@ -295,28 +305,33 @@ class TransactionServiceImplTest {
     }  //--11
 
     @Test
-    void shouldWithdrawMoneySuccessfully() {
-        //Arrange
-        account.setAmount(BigDecimal.valueOf(5000));
+    void shouldCreatePendingWithdrawTransactionSuccessfully() {
+        // Arrange
+        account.setAmount(BigDecimal.valueOf(2000));
         Mockito.when(customerRepository.findByEmail("test@gmail.com")).thenReturn(Optional.of(customer));
 
         Mockito.when(accountRepository.findByAccountNumAndCustomer_CustomerId(withdrawRequestDTO.getAccountNum(),
-                                customer.getCustomerId())).thenReturn(Optional.of(account));
+                        customer.getCustomerId())).thenReturn(Optional.of(account));
 
-        Mockito.when(passwordEncoder.matches(withdrawRequestDTO.getPin(), account.getPinHash())).thenReturn(true);
+        Mockito.when(passwordEncoder.matches(withdrawRequestDTO.getPin(), account.getPinHash()))
+                .thenReturn(true);
 
         Mockito.when(transactionRepository.save(Mockito.any(Transaction.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        //Act
+        Mockito.doNothing().when(otpService).sendOtp(Mockito.anyString(), Mockito.any());
+
+        // Act
         TransactionResponseDTO response = transactionService.withdrawMoney("test@gmail.com", withdrawRequestDTO);
 
-        //Assert
+        // Assert
         Assertions.assertNotNull(response);
-        Assertions.assertEquals(BigDecimal.valueOf(2000), response.getAmount());
+        Assertions.assertEquals(withdrawRequestDTO.getAmount(), response.getAmount());
+        Assertions.assertEquals(TransactionStatus.PENDING, response.getTransactionStatus());
 
         Mockito.verify(transactionRepository).save(Mockito.any(Transaction.class));
-    }     //----------------------------------------12
+        Mockito.verify(otpService).sendOtp(Mockito.eq("test@gmail.com"), Mockito.any());
+    }  //----------------------------------------12
 
     @Test
     void shouldThrowExceptionWhenCustomerNotFoundDuringTransactionHistory(){
@@ -491,7 +506,7 @@ class TransactionServiceImplTest {
     }  //---19
 
     @Test
-    void shouldTransferMoneySuccessfully() {
+    void shouldCreatePendingTransferMoneyTransactionSuccessfully() {
 
         // Arrange
         Mockito.when(customerRepository.findByEmail("test@gmail.com")).thenReturn(Optional.of(customer));
@@ -510,12 +525,14 @@ class TransactionServiceImplTest {
         Mockito.when(transactionRepository.save(Mockito.any(Transaction.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
+        Mockito.doNothing().when(otpService).sendOtp(Mockito.anyString(), Mockito.any());
+
         // Act
         TransferResponseDTO response = transactionService.transferMoney("test@gmail.com", transferRequestDTO);
 
         // Assert
         Assertions.assertNotNull(response);
-        Assertions.assertEquals("SUCCESS", response.getStatus());
+        Assertions.assertEquals(TransactionStatus.PENDING, response.getStatus());
         Assertions.assertEquals(transferRequestDTO.getAmount(), response.getAmount());
         Assertions.assertNotNull(response.getTransactionReferenceId());
         Assertions.assertNotEquals(response.getFromAccountNum(), response.getToAccountNum());
@@ -527,7 +544,7 @@ class TransactionServiceImplTest {
         Mockito.verify(accountRepository).findByAccountNum(
                 transferRequestDTO.getToAccountNum());
 
-        Mockito.verify(transactionRepository, Mockito.times(2))
+        Mockito.verify(transactionRepository, Mockito.times(1))
                 .save(Mockito.any(Transaction.class));
     }  //-------------------------------------------20
 
@@ -676,5 +693,138 @@ class TransactionServiceImplTest {
 
         Mockito.verify(transactionRepository, Mockito.never()).save(Mockito.any());
     }  //-----------------------------------28
+
+    @Test
+    void shouldConfirmWithdrawTransactionSuccessfully() {
+        // Arrange
+        senderAccount.setCustomer(customer);
+
+        transaction.setTransactionStatus(TransactionStatus.PENDING);
+        transaction.setAccount(senderAccount);
+        transaction.setAmount(BigDecimal.valueOf(2000));
+        transaction.setOperationType(OperationType.WITHDRAW);
+
+        Mockito.when(transactionRepository.findByTransactionId(confirmRequestDTO.getTransactionId()))
+                .thenReturn(Optional.of(transaction));
+
+        Mockito.when(otpService.verifyOtp(customer.getEmail(), transaction.getTransactionId(),
+                confirmRequestDTO.getOTP())).thenReturn(true);
+
+        Mockito.when(accountRepository.save(Mockito.any(Account.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        Mockito.when(transactionRepository.save(Mockito.any(Transaction.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        TransactionResponseDTO response =
+                transactionService.transactionConfirm(customer.getEmail(), confirmRequestDTO);
+
+        // Assert
+        Assertions.assertNotNull(response);
+        Assertions.assertEquals(TransactionStatus.SUCCESS, response.getTransactionStatus());
+        Assertions.assertEquals(BigDecimal.valueOf(3000), senderAccount.getAmount());
+
+        Mockito.verify(accountRepository).save(senderAccount);
+        Mockito.verify(transactionRepository, Mockito.times(1))
+                .save(Mockito.any(Transaction.class));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenTransactionNotFound() {
+        Mockito.when(transactionRepository.findByTransactionId(confirmRequestDTO.getTransactionId()))
+                .thenReturn(Optional.empty());
+
+        TransactionNotFoundException ex =
+                Assertions.assertThrows(TransactionNotFoundException.class,
+                        () -> transactionService.transactionConfirm(customer.getEmail(), confirmRequestDTO));
+
+        Assertions.assertEquals("Transaction not found", ex.getMessage());
+
+        Mockito.verify(transactionRepository, Mockito.never()).save(Mockito.any());
+    }
+
+    @Test
+    void shouldThrowExceptionWhenTransactionAlreadyProcessed() {
+        transaction.setTransactionStatus(TransactionStatus.SUCCESS);
+
+        Mockito.when(transactionRepository.findByTransactionId(confirmRequestDTO.getTransactionId()))
+                .thenReturn(Optional.of(transaction));
+
+        TransactionAlreadyProcessedException ex = Assertions.assertThrows(TransactionAlreadyProcessedException.class,
+                        () -> transactionService.transactionConfirm(customer.getEmail(), confirmRequestDTO));
+
+        Assertions.assertEquals("Transaction already processed", ex.getMessage());
+    }
+
+    @Test
+    void shouldThrowExceptionWhenUserUnauthorized() {
+        // Arrange
+        customer.setEmail("owner@gmail.com");
+
+        senderAccount.setCustomer(customer);
+
+        transaction.setTransactionStatus(TransactionStatus.PENDING);
+        transaction.setAccount(senderAccount);
+        transaction.setAmount(BigDecimal.valueOf(2000));
+
+        Mockito.when(transactionRepository.findByTransactionId(confirmRequestDTO.getTransactionId()))
+                .thenReturn(Optional.of(transaction));
+
+        // Act + Assert
+        UnauthorizedException ex = Assertions.assertThrows(
+                UnauthorizedException.class,
+                () -> transactionService.transactionConfirm("hacker@gmail.com", confirmRequestDTO)
+        );
+
+        Assertions.assertEquals("Unauthorized", ex.getMessage());
+
+        Mockito.verify(transactionRepository, Mockito.never()).save(Mockito.any());
+        Mockito.verify(accountRepository, Mockito.never()).save(Mockito.any());
+    }
+
+    @Test
+    void shouldConfirmTransferTransactionSuccessfully() {
+        // Arrange
+        senderAccount.setCustomer(customer);
+        senderAccount.setAmount(BigDecimal.valueOf(5000));
+
+        transaction.setAccount(senderAccount);
+        transaction.setAmount(BigDecimal.valueOf(2000)); // 🔥 REQUIRED
+        transaction.setOperationType(OperationType.TRANSFER);
+        transaction.setTransactionStatus(TransactionStatus.PENDING);
+        transaction.setCounterpartyAccountNum(987654L);
+
+        Account receiver = new Account();
+        receiver.setAmount(BigDecimal.valueOf(1000));
+
+        Mockito.when(transactionRepository.findByTransactionId(confirmRequestDTO.getTransactionId()))
+                .thenReturn(Optional.of(transaction));
+
+        Mockito.when(otpService.verifyOtp(
+                customer.getEmail(),
+                confirmRequestDTO.getTransactionId(),
+                confirmRequestDTO.getOTP()
+        )).thenReturn(true);
+
+        Mockito.when(accountRepository.findByAccountNum(987654L)).thenReturn(Optional.of(receiver));
+
+        Mockito.when(accountRepository.save(Mockito.any(Account.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        Mockito.when(transactionRepository.save(Mockito.any(Transaction.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        TransactionResponseDTO response = transactionService.transactionConfirm(customer.getEmail(), confirmRequestDTO);
+
+        // Assert
+        Assertions.assertNotNull(response);
+        Assertions.assertEquals(TransactionStatus.SUCCESS, response.getTransactionStatus());
+        Assertions.assertEquals(BigDecimal.valueOf(3000), senderAccount.getAmount());
+
+        Mockito.verify(transactionRepository, Mockito.times(2))
+                .save(Mockito.any(Transaction.class));
+    }
 
 }

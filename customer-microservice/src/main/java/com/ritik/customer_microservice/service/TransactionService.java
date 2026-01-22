@@ -15,5 +15,5 @@ public interface TransactionService {
 
     TransferResponseDTO transferMoney(String email, TransferRequestDTO transferRequestDTO);
 
-    TransactionResponseDTO transactionConfirm(String email, ConfirmRequestDTO dto)throws AccessDeniedException;
+    TransactionResponseDTO transactionConfirm(String email, ConfirmRequestDTO dto);
 }

@@ -90,7 +90,7 @@ public class TransactionController {
     @PostMapping("/confirm-transaction")
     public ResponseEntity<TransactionResponseDTO> confirmTransaction(
             @AuthenticationPrincipal CustomerPrincipal principal,
-            @Valid @RequestBody ConfirmRequestDTO confirmRequestDTO) throws AccessDeniedException {
+            @Valid @RequestBody ConfirmRequestDTO confirmRequestDTO){
 
         String email = principal.getUsername();
         log.info("API call: CONFIRM TRANSACTION MONEY | user={}", email);

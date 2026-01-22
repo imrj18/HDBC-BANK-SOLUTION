@@ -3,11 +3,11 @@ package com.ritik.customer_microservice.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ritik.customer_microservice.config.JwtFilter;
 import com.ritik.customer_microservice.config.WithMockCustomer;
-import com.ritik.customer_microservice.controller.TransactionController;
 import com.ritik.customer_microservice.dto.transactionDTO.*;
-
+import com.ritik.customer_microservice.enums.TransactionStatus;
 import com.ritik.customer_microservice.enums.TransactionType;
 import com.ritik.customer_microservice.service.AccountService;
+import com.ritik.customer_microservice.service.OtpService;
 import com.ritik.customer_microservice.service.TransactionService;
 import com.ritik.customer_microservice.serviceImpl.PageResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -46,6 +47,9 @@ class TransactionControllerTest {
 
     @MockBean
     private AccountService accountService;
+
+    @MockBean
+    private OtpService otpService;
 
     private DepositRequestDTO depositRequestDTO;
     private TransactionResponseDTO transactionResponseDTO;
@@ -73,6 +77,7 @@ class TransactionControllerTest {
         transactionResponseDTO = new TransactionResponseDTO();
         transactionResponseDTO.setAccountNum(12345678901L);
         transactionResponseDTO.setAmount(BigDecimal.valueOf(5000));
+        transactionResponseDTO.setTransactionStatus(TransactionStatus.PENDING);
     }
 
     @Test
@@ -121,7 +126,8 @@ class TransactionControllerTest {
                         .content(objectMapper.writeValueAsString(withdrawRequestDTO)))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.accountNum").value(12345678901L))
-                .andExpect(jsonPath("$.amount").value(5000));
+                .andExpect(jsonPath("$.amount").value(5000))
+                .andExpect(jsonPath("$.transactionStatus").value("PENDING"));
 
         Mockito.verify(transactionService)
                 .withdrawMoney(Mockito.eq("jd@gmail.com"), Mockito.any(WithdrawRequestDTO.class));
@@ -166,6 +172,7 @@ class TransactionControllerTest {
 
         TransferResponseDTO responseDTO = new TransferResponseDTO();
         responseDTO.setAmount(BigDecimal.valueOf(2000));
+        responseDTO.setStatus(TransactionStatus.PENDING);
 
         Mockito.when(transactionService.transferMoney(
                         Mockito.eq("jd@gmail.com"),
@@ -176,7 +183,8 @@ class TransactionControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(transferRequestDTO)))
                 .andExpect(status().isAccepted())
-                .andExpect(jsonPath("$.amount").value(2000));
+                .andExpect(jsonPath("$.amount").value(2000))
+                .andExpect(jsonPath("$.status").value("PENDING"));
 
         Mockito.verify(transactionService).transferMoney(Mockito.eq("jd@gmail.com"), Mockito.any());
     }
@@ -191,5 +199,42 @@ class TransactionControllerTest {
                 .andExpect(status().isBadRequest());
 
         Mockito.verify(transactionService, Mockito.never()).transferMoney(Mockito.any(), Mockito.any());
+    }
+
+    @Test
+    @WithMockCustomer()
+    void shouldConfirmTransactionSuccessfully() throws Exception{
+
+        ConfirmRequestDTO confirmRequestDTO = new ConfirmRequestDTO();
+        confirmRequestDTO.setTransactionId(UUID.randomUUID());
+        confirmRequestDTO.setOTP("1234");
+
+        transactionResponseDTO.setTransactionStatus(TransactionStatus.SUCCESS);
+
+        Mockito.when(transactionService.transactionConfirm(
+                        Mockito.eq("jd@gmail.com"),
+                        Mockito.any(ConfirmRequestDTO.class)))
+                .thenReturn(transactionResponseDTO);
+
+        mockMvc.perform(post("/api/customers/transactions/confirm-transaction")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(confirmRequestDTO)))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.amount").value(5000))
+                .andExpect(jsonPath("$.transactionStatus").value("SUCCESS"));
+
+        Mockito.verify(transactionService).transactionConfirm(Mockito.eq("jd@gmail.com"), Mockito.any());
+    }
+
+    @Test
+    @WithMockCustomer()
+    void shouldReturn400WhenConfirmTransactionRequestInvalid() throws Exception {
+
+        mockMvc.perform(post("/api/customers/transactions/confirm-transaction")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ConfirmRequestDTO())))
+                .andExpect(status().isBadRequest());
+
+        Mockito.verify(transactionService, Mockito.never()).transactionConfirm(Mockito.any(), Mockito.any());
     }
 }
