@@ -15,6 +15,9 @@ import com.ritik.customer_microservice.service.OtpService;
 import com.ritik.customer_microservice.service.TransactionService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -23,7 +26,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.nio.file.AccessDeniedException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -40,6 +42,21 @@ public class TransactionServiceImpl implements TransactionService {
     private final PasswordEncoder passwordEncoder;
 
     private final OtpService otpService;
+
+    private final CacheManager cacheManager;
+
+    private void evictBalanceCache(String email, Long accountNum) {
+        Cache checkBalanceCache = cacheManager.getCache("checkBalance");
+        if (checkBalanceCache != null) {
+            checkBalanceCache.evict(List.of(email, accountNum));
+        }
+
+        Cache bankCustomersCache = cacheManager.getCache("bankCustomers");
+        if (bankCustomersCache != null) {
+            bankCustomersCache.clear();
+        }
+    }
+
 
     private Transaction toEntityForDeposit(DepositRequestDTO dto, Account account) {
 
@@ -177,6 +194,7 @@ public class TransactionServiceImpl implements TransactionService {
         Transaction transaction = toEntityForDeposit(depositRequestDTO,account);
         transactionRepository.save(transaction);
 
+        evictBalanceCache(email, depositRequestDTO.getAccountNum());
         return toDto(transaction);
     }
 
@@ -208,6 +226,11 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    @Cacheable(
+            value = "transactionHistory",
+            key = "{#email, #accountNum, #page, #size}",
+            unless = "#result==null"
+    )
     public PageResponse<TransactionHistoryDTO> transactionHistory(String email, Long accountNum, int page, int size) {
 
         Pageable pageable = PageRequest.of(
@@ -333,6 +356,8 @@ public class TransactionServiceImpl implements TransactionService {
         debitTx.setClosingBalance(sender.getAmount());
         transactionRepository.save(debitTx);
 
+        evictBalanceCache(sender.getCustomer().getEmail(), sender.getAccountNum());
+
         if (debitTx.getOperationType() == OperationType.TRANSFER) {
 
             Account receiver = accountRepository
@@ -351,6 +376,8 @@ public class TransactionServiceImpl implements TransactionService {
                     );
 
             transactionRepository.save(creditTx);
+
+            evictBalanceCache(sender.getCustomer().getEmail(), sender.getAccountNum());
         }
 
         return toDto(debitTx);

@@ -12,6 +12,7 @@ import com.ritik.bank_microservice.service.BankService;
 import com.ritik.bank_microservice.wrapper.PageResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -56,6 +57,10 @@ public class BankServiceImpl implements BankService {
     }
 
     @Override
+    @Cacheable(value = "banks",
+            key = "{#ifsc, #bankId, #page, #size}",
+            unless = "#result == null"
+    )
     public PageResponse<BankResponseDTO> getBankDetails(String ifsc, Long bankId, int page, int size) {
 
         if (ifsc != null && bankId != null) {

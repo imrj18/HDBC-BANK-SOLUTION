@@ -12,6 +12,9 @@ import com.ritik.customer_microservice.repository.CustomerRepository;
 import com.ritik.customer_microservice.repository.CustomerSessionRepository;
 import com.ritik.customer_microservice.service.CustomerService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -137,9 +140,12 @@ public class CustomerServiceImpl implements CustomerService {
         );
     }
 
-
-
     @Override
+    @Cacheable(
+            value = "customerProfile",
+            key = "#email",
+            unless = "#result == null"
+    )
     public CustomerResponseDTO viewProfile(String email) {
         Customer customer = customerRepository.findByEmail(email).orElseThrow(() ->
                 new CustomerNotFoundException("Customer not found."));
@@ -147,6 +153,17 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
+    @Caching(evict = {
+            @CacheEvict(
+                    value = "customerProfile",
+                    key = "#email"
+            ),
+            @CacheEvict(
+                    value = "bankCustomers",
+                    allEntries = true
+            )
+    })
+
     public CustomerResponseDTO updateProfile(String email, CustomerUpdateDTO updateDTO) {
         Customer customer = customerRepository.findByEmail(email).orElseThrow(() ->
                 new CustomerNotFoundException("Customer not found."));
@@ -160,7 +177,11 @@ public class CustomerServiceImpl implements CustomerService {
         return toResponseDto(customer);
     }
 
-
+    @Cacheable(
+            value = "bankCustomers",
+            key = "{#bankId, #minBalance, #maxBalance, #page, #size}",
+            unless = "#result == null"
+    )
     @Override
     public PageResponse<CustomerBalanceDTO> fetchCustomersByBankIdAndBalance(
             Long bankId,

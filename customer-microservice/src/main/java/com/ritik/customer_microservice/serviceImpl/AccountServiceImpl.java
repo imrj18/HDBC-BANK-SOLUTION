@@ -14,6 +14,7 @@ import com.ritik.customer_microservice.repository.CustomerRepository;
 import com.ritik.customer_microservice.service.AccountService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -101,6 +102,11 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    @Cacheable(
+            value = "checkBalance",
+            key = "{#email, #accountNum}",
+            unless = "#result == null"
+    )
     public AccountBalanceDTO checkBalance(String email, Long accountNum){
         Customer customer = customerRepository.findByEmail(email).orElseThrow(()->
                 new CustomerNotFoundException("Customer not found"));
@@ -114,6 +120,11 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    @Cacheable(
+            value = "accountInfo",
+            key = "{#email, #accountNum}",
+            unless = "#result == null"
+    )
     public List<AccountResponseDTO> getAccountInfo(String email, Long accountNum) {
         Customer customer = customerRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomerNotFoundException("Customer not found"));
