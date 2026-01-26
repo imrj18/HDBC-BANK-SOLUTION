@@ -5,6 +5,7 @@ import com.ritik.customer_microservice.dto.accountDTO.AccountResponseDTO;
 import com.ritik.customer_microservice.dto.accountDTO.CreateAccountDTO;
 import com.ritik.customer_microservice.model.CustomerPrincipal;
 import com.ritik.customer_microservice.service.AccountService;
+import com.ritik.customer_microservice.serviceImpl.PageResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -65,7 +66,7 @@ public class AccountController {
     }
 
     @GetMapping("/account-info")
-    public ResponseEntity<List<AccountResponseDTO>> accountInfo(
+    public ResponseEntity<PageResponse<AccountResponseDTO>> accountInfo(
             @AuthenticationPrincipal CustomerPrincipal principal,
             @RequestParam(required = false)
             @Positive(message = "Account number must be positive")
@@ -79,11 +80,11 @@ public class AccountController {
             log.info("API call: ACCOUNT INFO | user={} | all accounts", email);
         }
 
-        List<AccountResponseDTO> accounts =
+        PageResponse<AccountResponseDTO> accounts =
                 accountService.getAccountInfo(email, accountNum);
 
         log.info("Account info retrieved | user={} | resultCount={}",
-                email, accounts.size());
+                email, accounts.getTotalPages());
 
         return ResponseEntity.ok(accounts);
     }

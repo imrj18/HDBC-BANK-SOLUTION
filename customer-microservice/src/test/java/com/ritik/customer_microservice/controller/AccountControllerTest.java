@@ -11,6 +11,7 @@ import com.ritik.customer_microservice.enums.AccountType;
 import com.ritik.customer_microservice.enums.Status;
 import com.ritik.customer_microservice.exception.BankNotFoundException;
 import com.ritik.customer_microservice.service.AccountService;
+import com.ritik.customer_microservice.serviceImpl.PageResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -175,14 +176,15 @@ class AccountControllerTest {
 
         List<AccountResponseDTO> responseList = List.of(account1, account2);
 
-        Mockito.when(accountService.getAccountInfo("jd@gmail.com", null)).thenReturn(responseList);
+        Mockito.when(accountService.getAccountInfo("jd@gmail.com", null)).thenReturn(
+                new PageResponse<>((responseList), 0, 1, 2, true));
 
         // Act & Assert
         mockMvc.perform(get("/api/customers/accounts/account-info"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].accountNum").value(11111111111L))
-                .andExpect(jsonPath("$[1].accountNum").value(22222222222L));
+                .andExpect(jsonPath("$.length()").value(5))
+                .andExpect(jsonPath("$.data[0].accountNum").value(11111111111L))
+                .andExpect(jsonPath("$.data[1].accountNum").value(22222222222L));
 
         Mockito.verify(accountService, Mockito.times(1))
                 .getAccountInfo("jd@gmail.com", null);
@@ -197,7 +199,8 @@ class AccountControllerTest {
         account.setAccountNum(12345678901L);
         account.setBankId(1L);
 
-        List<AccountResponseDTO> responseList = List.of(account);
+        PageResponse<AccountResponseDTO> responseList = new PageResponse<>(List.of(account),
+                0,1,1, true);
 
         Mockito.when(accountService.getAccountInfo("jd@gmail.com", 12345678901L))
                 .thenReturn(responseList);
@@ -206,8 +209,8 @@ class AccountControllerTest {
         mockMvc.perform(get("/api/customers/accounts/account-info")
                                 .param("accountNum", "12345678901"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].accountNum").value(12345678901L));
+                .andExpect(jsonPath("$.length()").value(5))
+                .andExpect(jsonPath("$.data[0].accountNum").value(12345678901L));
 
         Mockito.verify(accountService, Mockito.times(1))
                 .getAccountInfo("jd@gmail.com", 12345678901L);

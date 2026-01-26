@@ -236,12 +236,12 @@ class AccountServiceImplTest {
                 .thenReturn(accounts);
 
         // Act
-        List<AccountResponseDTO> response = accountService.getAccountInfo("test@example.com", null);
+        PageResponse<AccountResponseDTO> response = accountService.getAccountInfo("test@example.com", null);
 
         // Assert
         Assertions.assertNotNull(response);
-        Assertions.assertEquals(1, response.size());
-        Assertions.assertEquals(account.getAccountNum(), response.get(0).getAccountNum());
+        Assertions.assertEquals(1, response.getTotalItems());
+        Assertions.assertEquals(account.getAccountNum(), response.getData().get(0).getAccountNum());
 
         Mockito.verify(customerRepository).findByEmail("test@example.com");
         Mockito.verify(accountRepository)
@@ -282,13 +282,13 @@ class AccountServiceImplTest {
                 .thenReturn(Optional.of(account));
 
         // Act
-        List<AccountResponseDTO> response = accountService
+        PageResponse<AccountResponseDTO> response = accountService
                 .getAccountInfo("test@example.com", 1234567890L);
 
         // Assert
         Assertions.assertNotNull(response);
-        Assertions.assertEquals(1, response.size());
-        Assertions.assertEquals(account.getAccountNum(), response.get(0).getAccountNum());
+        Assertions.assertEquals(1, response.getTotalPages());
+        Assertions.assertEquals(account.getAccountNum(), response.getData().get(0).getAccountNum());
 
         Mockito.verify(customerRepository).findByEmail("test@example.com");
         Mockito.verify(accountRepository)

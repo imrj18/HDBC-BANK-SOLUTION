@@ -19,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -125,24 +126,40 @@ public class AccountServiceImpl implements AccountService {
             key = "{#email, #accountNum}",
             unless = "#result == null"
     )
-    public List<AccountResponseDTO> getAccountInfo(String email, Long accountNum) {
+    public PageResponse<AccountResponseDTO> getAccountInfo(String email, Long accountNum) {
+
         Customer customer = customerRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomerNotFoundException("Customer not found"));
 
+        List<AccountResponseDTO> responseList = new ArrayList<>();
+
         if (accountNum == null) {
-            List<Account> accounts = accountRepository.findByCustomer_CustomerId(customer.getCustomerId());
+            List<Account> accounts =
+                    accountRepository.findByCustomer_CustomerId(customer.getCustomerId());
 
             if (accounts.isEmpty()) {
                 throw new AccountNotFoundException("Account not found.");
             }
 
-            return accounts.stream().map(this::toResponseDto).toList();
+            for (Account account : accounts) {
+                responseList.add(toResponseDto(account));
+            }
+
+        } else {
+            Account account = accountRepository
+                    .findByAccountNumAndCustomer_CustomerId(accountNum, customer.getCustomerId())
+                    .orElseThrow(() -> new AccountNotFoundException("Account not found"));
+
+            responseList.add(toResponseDto(account));
         }
 
-        Account account = accountRepository
-                .findByAccountNumAndCustomer_CustomerId(accountNum, customer.getCustomerId())
-                .orElseThrow(() -> new AccountNotFoundException("Account not found"));
-
-        return List.of(toResponseDto(account));
+        return new PageResponse<>(
+                responseList,
+                0,
+                1,
+                responseList.size(),
+                true
+        );
     }
+
 }
