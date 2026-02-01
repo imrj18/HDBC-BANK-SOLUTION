@@ -10,7 +10,6 @@ import com.ritik.customer_microservice.model.Transaction;
 import com.ritik.customer_microservice.repository.AccountRepository;
 import com.ritik.customer_microservice.repository.CustomerRepository;
 import com.ritik.customer_microservice.repository.TransactionRepository;
-import com.ritik.customer_microservice.serviceImpl.TransactionServiceImpl;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +18,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -44,6 +44,9 @@ class TransactionServiceImplTest {
 
     @Mock
     private OtpServiceImpl otpService;
+
+    @Mock
+    private CacheManager cacheManager;
 
     private DepositRequestDTO depositRequestDTO;
     private WithdrawRequestDTO withdrawRequestDTO;
