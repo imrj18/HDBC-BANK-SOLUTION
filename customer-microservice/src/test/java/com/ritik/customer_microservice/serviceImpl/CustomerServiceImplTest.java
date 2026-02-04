@@ -177,6 +177,7 @@ class CustomerServiceImplTest {
         Assertions.assertThrows(CustomerNotFoundException.class, () -> customerService.verify(loginDTO));
 
         Mockito.verify(customerRepository, Mockito.never()).save(Mockito.any());
+        Mockito.verify(customerSessionRepository, Mockito.never()).save(Mockito.any(CustomerSession.class));
     }
 
     @Test
@@ -192,6 +193,7 @@ class CustomerServiceImplTest {
         Assertions.assertThrows(WrongPasswordException.class, () -> customerService.verify(loginDTO));
 
         Mockito.verify(customerRepository, Mockito.never()).save(Mockito.any());
+        Mockito.verify(customerSessionRepository, Mockito.never()).save(Mockito.any(CustomerSession.class));
     }
 
     @Test
@@ -216,6 +218,35 @@ class CustomerServiceImplTest {
         Assertions.assertEquals("Customer already has an active session", ex.getMessage());
 
         Mockito.verify(customerSessionRepository, Mockito.never()).save(Mockito.any(CustomerSession.class));
+    }
+
+    @Test
+    void shouldDeleteExpiredSessionAndLoginSuccessfully() {
+
+        CustomerSession expiredSession = new CustomerSession();
+        expiredSession.setExpiryTime(LocalDateTime.now().minusMinutes(5));
+
+        Mockito.when(customerRepository.findByEmail(loginDTO.getEmail())).thenReturn(Optional.of(savedCustomer));
+
+        Mockito.when(passwordEncoder.matches(loginDTO.getPassword(), savedCustomer.getPasswordHash()))
+                .thenReturn(true);
+
+        Mockito.when(customerSessionRepository.findById(savedCustomer.getCustomerId()))
+                .thenReturn(Optional.of(expiredSession));
+
+        String token = "jwt-token";
+        Date expiryDate = new Date(System.currentTimeMillis() + 60000);
+
+        Mockito.when(jwtService.generateUserToken(loginDTO.getEmail())).thenReturn(token);
+
+        Mockito.when(jwtService.extractExpiryTime(token)).thenReturn(expiryDate);
+
+        AuthResponseDTO result = customerService.verify(loginDTO);
+
+        Assertions.assertNotNull(result);
+
+        Mockito.verify(customerSessionRepository).delete(expiredSession);
+        Mockito.verify(customerSessionRepository).save(Mockito.any(CustomerSession.class));
     }
 
     @Test
@@ -248,7 +279,6 @@ class CustomerServiceImplTest {
         Mockito.verify(customerSessionRepository).save(Mockito.any(CustomerSession.class));
     }
 
-
     @Test
     void shouldThrowExceptionWhenCustomerNotFoundUpdateDetails(){
         //Arrange
@@ -262,11 +292,27 @@ class CustomerServiceImplTest {
     }
 
     @Test
+    void shouldThrowExceptionWhenCustomerAlreadyExistsUpdateDetails(){
+        //Arrange
+        String email = "ritik@example.com";
+        Mockito.when(customerRepository.findByEmail(email)).thenReturn(Optional.of(savedCustomer));
+        Mockito.when(customerRepository.existsByPhone(updateDTO.getPhone())).thenReturn(true);
+
+        //Act+Assert
+        Assertions.assertThrows(CustomerAlreadyExistsException.class,
+                () -> customerService.updateProfile(email,updateDTO));
+
+        Mockito.verify(customerRepository, Mockito.never()).save(Mockito.any());
+    }
+
+    @Test
     void shouldUpdateProfileSuccessfully() {
 
         //Arrange
         String email = "ritik@example.com";
         Mockito.when(customerRepository.findByEmail(email)).thenReturn(Optional.of(savedCustomer));
+
+        Mockito.when(customerRepository.existsByPhone(updateDTO.getPhone())).thenReturn(false);
 
         Mockito.when(customerRepository.save(Mockito.any(Customer.class))).thenReturn(savedCustomer);
 
@@ -279,6 +325,32 @@ class CustomerServiceImplTest {
         Assertions.assertEquals(updateDTO.getAddress(), response.getAddress());
 
         Mockito.verify(customerRepository).save(Mockito.any());
+    }
+
+    @Test
+    void shouldThrowExceptionCustomerNotFoundInViewProfile(){
+        //Arrange
+        Mockito.when(customerRepository.findByEmail(loginDTO.getEmail())).thenReturn(Optional.empty());
+
+        //Act+Assert
+        Assertions.assertThrows(CustomerNotFoundException.class,
+                () -> customerService.viewProfile(loginDTO.getEmail()));
+
+        Mockito.verify(customerRepository).findByEmail(loginDTO.getEmail());
+    }
+
+    @Test
+    void shouldViewProfileSuccessfully(){
+        //Arrange
+        Mockito.when(customerRepository.findByEmail(loginDTO.getEmail())).thenReturn(Optional.of(savedCustomer));
+
+        //Act
+        CustomerResponseDTO responseDTO = customerService.viewProfile(loginDTO.getEmail());
+
+        //Assert
+        Assertions.assertEquals("Ritik Jani", responseDTO.getName());
+        Assertions.assertEquals("ritik@gmail.com",responseDTO.getEmail());
+        Assertions.assertEquals("9876543210",responseDTO.getPhone());
     }
 
     @Test
@@ -308,7 +380,6 @@ class CustomerServiceImplTest {
                 Mockito.eq(maxBalance),
                 Mockito.any(Pageable.class));
     }
-
 
     @Test
     void shouldFetchCustomersSuccessfully(){
