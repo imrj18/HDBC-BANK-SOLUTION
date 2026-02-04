@@ -5,7 +5,7 @@ import com.ritik.customer_microservice.dto.accountDTO.AccountResponseDTO;
 import com.ritik.customer_microservice.dto.accountDTO.CreateAccountDTO;
 import com.ritik.customer_microservice.model.CustomerPrincipal;
 import com.ritik.customer_microservice.service.AccountService;
-import com.ritik.customer_microservice.serviceImpl.PageResponse;
+import com.ritik.customer_microservice.wrapper.PageResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -16,8 +16,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @Slf4j
 @RestController

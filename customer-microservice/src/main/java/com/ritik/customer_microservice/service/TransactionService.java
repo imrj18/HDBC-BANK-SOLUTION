@@ -1,10 +1,7 @@
 package com.ritik.customer_microservice.service;
 
 import com.ritik.customer_microservice.dto.transactionDTO.*;
-import com.ritik.customer_microservice.serviceImpl.PageResponse;
-
-import java.nio.file.AccessDeniedException;
-import java.util.List;
+import com.ritik.customer_microservice.wrapper.PageResponse;
 
 public interface TransactionService {
     TransactionResponseDTO depositMoney(String email, DepositRequestDTO depositRequestDTO);

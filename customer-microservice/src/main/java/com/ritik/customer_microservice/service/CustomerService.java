@@ -1,10 +1,9 @@
 package com.ritik.customer_microservice.service;
 
 import com.ritik.customer_microservice.dto.customerDTO.*;
-import com.ritik.customer_microservice.serviceImpl.PageResponse;
+import com.ritik.customer_microservice.wrapper.PageResponse;
 
 import java.math.BigDecimal;
-import java.util.List;
 
 public interface CustomerService {
 

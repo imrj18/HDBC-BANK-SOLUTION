@@ -3,7 +3,6 @@ package com.ritik.customer_microservice.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ritik.customer_microservice.config.JwtFilter;
 import com.ritik.customer_microservice.config.WithMockCustomer;
-import com.ritik.customer_microservice.controller.AccountController;
 import com.ritik.customer_microservice.dto.accountDTO.AccountBalanceDTO;
 import com.ritik.customer_microservice.dto.accountDTO.AccountResponseDTO;
 import com.ritik.customer_microservice.dto.accountDTO.CreateAccountDTO;
@@ -11,7 +10,7 @@ import com.ritik.customer_microservice.enums.AccountType;
 import com.ritik.customer_microservice.enums.Status;
 import com.ritik.customer_microservice.exception.BankNotFoundException;
 import com.ritik.customer_microservice.service.AccountService;
-import com.ritik.customer_microservice.serviceImpl.PageResponse;
+import com.ritik.customer_microservice.wrapper.PageResponse;
 import com.ritik.customer_microservice.serviceImpl.TransactionFailureService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,8 +24,6 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;

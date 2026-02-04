@@ -4,9 +4,8 @@ import com.ritik.customer_microservice.dto.transactionDTO.*;
 import com.ritik.customer_microservice.model.CustomerPrincipal;
 import com.ritik.customer_microservice.service.OtpService;
 import com.ritik.customer_microservice.service.TransactionService;
-import com.ritik.customer_microservice.serviceImpl.PageResponse;
+import com.ritik.customer_microservice.wrapper.PageResponse;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,9 +14,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
-import java.nio.file.AccessDeniedException;
-import java.util.List;
 
 @Slf4j
 @RestController

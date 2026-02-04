@@ -1,4 +1,4 @@
-package com.ritik.customer_microservice.serviceImpl;
+package com.ritik.customer_microservice.wrapper;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

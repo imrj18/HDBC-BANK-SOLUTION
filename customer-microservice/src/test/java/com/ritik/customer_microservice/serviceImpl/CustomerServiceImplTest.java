@@ -10,6 +10,7 @@ import com.ritik.customer_microservice.model.Customer;
 import com.ritik.customer_microservice.model.CustomerSession;
 import com.ritik.customer_microservice.repository.CustomerRepository;
 import com.ritik.customer_microservice.repository.CustomerSessionRepository;
+import com.ritik.customer_microservice.wrapper.PageResponse;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

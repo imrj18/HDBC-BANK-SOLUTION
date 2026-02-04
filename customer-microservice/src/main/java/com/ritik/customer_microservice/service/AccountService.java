@@ -3,7 +3,7 @@ package com.ritik.customer_microservice.service;
 import com.ritik.customer_microservice.dto.accountDTO.AccountBalanceDTO;
 import com.ritik.customer_microservice.dto.accountDTO.AccountResponseDTO;
 import com.ritik.customer_microservice.dto.accountDTO.CreateAccountDTO;
-import com.ritik.customer_microservice.serviceImpl.PageResponse;
+import com.ritik.customer_microservice.wrapper.PageResponse;
 
 
 public interface AccountService {

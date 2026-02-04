@@ -12,6 +12,7 @@ import com.ritik.customer_microservice.model.Customer;
 import com.ritik.customer_microservice.repository.AccountRepository;
 import com.ritik.customer_microservice.repository.CustomerRepository;
 import com.ritik.customer_microservice.service.AccountService;
+import com.ritik.customer_microservice.wrapper.PageResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

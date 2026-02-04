@@ -9,7 +9,7 @@ import com.ritik.customer_microservice.enums.TransactionType;
 import com.ritik.customer_microservice.service.AccountService;
 import com.ritik.customer_microservice.service.OtpService;
 import com.ritik.customer_microservice.service.TransactionService;
-import com.ritik.customer_microservice.serviceImpl.PageResponse;
+import com.ritik.customer_microservice.wrapper.PageResponse;
 import com.ritik.customer_microservice.serviceImpl.TransactionFailureService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
