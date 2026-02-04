@@ -12,6 +12,7 @@ import com.ritik.customer_microservice.enums.Status;
 import com.ritik.customer_microservice.exception.BankNotFoundException;
 import com.ritik.customer_microservice.service.AccountService;
 import com.ritik.customer_microservice.serviceImpl.PageResponse;
+import com.ritik.customer_microservice.serviceImpl.TransactionFailureService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -44,6 +45,10 @@ class AccountControllerTest {
 
     @MockBean
     private JwtFilter jwtFilter;
+
+    @MockBean
+    private TransactionFailureService transactionFailureService;
+
 
     @Autowired
     private ObjectMapper objectMapper;

@@ -7,6 +7,7 @@ import com.ritik.customer_microservice.controller.InternalCustomerController;
 import com.ritik.customer_microservice.dto.customerDTO.CustomerBalanceDTO;
 import com.ritik.customer_microservice.service.CustomerService;
 import com.ritik.customer_microservice.serviceImpl.PageResponse;
+import com.ritik.customer_microservice.serviceImpl.TransactionFailureService;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +39,9 @@ class InternalCustomerControllerTest {
 
     @MockBean
     private JwtFilter jwtFilter;
+
+    @MockBean
+    private TransactionFailureService transactionFailureService;
 
     @MockBean
     private CustomerService customerService;

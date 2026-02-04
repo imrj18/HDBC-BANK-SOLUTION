@@ -1,5 +1,6 @@
 package com.ritik.customer_microservice.serviceImpl;
 
+import com.ritik.customer_microservice.dto.event.TransactionEvent;
 import com.ritik.customer_microservice.dto.transactionDTO.*;
 import com.ritik.customer_microservice.enums.OperationType;
 import com.ritik.customer_microservice.enums.TransactionStatus;
@@ -18,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -44,6 +46,8 @@ public class TransactionServiceImpl implements TransactionService {
     private final OtpService otpService;
 
     private final CacheManager cacheManager;
+
+    private final ApplicationEventPublisher eventPublisher;
 
     private void evictBalanceCache(String email, Long accountNum) {
         Cache checkBalanceCache = cacheManager.getCache("checkBalance");
@@ -187,7 +191,7 @@ public class TransactionServiceImpl implements TransactionService {
         Account account = accountRepository.lockAccount(
                 depositRequestDTO.getAccountNum(),
                 customer.getCustomerId()
-        );
+        ).orElseThrow(()->new AccountNotFoundException("Account not found."));
 
         if (account == null) {
             throw new AccountNotFoundException("Account not found");
@@ -196,6 +200,17 @@ public class TransactionServiceImpl implements TransactionService {
         account.setAmount(account.getAmount().add(depositRequestDTO.getAmount()));
         Transaction transaction = toEntityForDeposit(depositRequestDTO,account);
         transactionRepository.save(transaction);
+
+        TransactionEvent event = new TransactionEvent(
+                transaction.getTransactionId(),
+                email,
+                depositRequestDTO.getAmount(),
+                OperationType.DEPOSIT,
+                TransactionType.CREDIT,
+                TransactionStatus.SUCCESS,
+                null);
+
+        eventPublisher.publishEvent(event);
 
         evictBalanceCache(email, depositRequestDTO.getAccountNum());
         return toDto(transaction);
@@ -334,18 +349,18 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     @Transactional
-    public TransactionResponseDTO transactionConfirm(
-            String email,
-            ConfirmRequestDTO dto
-    ) {
+    public TransactionResponseDTO transactionConfirm(String email, ConfirmRequestDTO dto) {
 
-        // 🔒 Lock transaction row (prevents double confirm)
         Transaction debitTx = transactionRepository
                 .lockByTransactionId(dto.getTransactionId())
                 .orElseThrow(() -> new TransactionNotFoundException("Transaction not found"));
 
-        if (debitTx.getTransactionStatus() != TransactionStatus.PENDING) {
+        if (debitTx.getTransactionStatus() == TransactionStatus.SUCCESS) {
             throw new TransactionAlreadyProcessedException("Transaction already processed");
+        }
+
+        if (debitTx.getTransactionStatus() == TransactionStatus.FAILED) {
+            throw new TransactionFailedException("Transaction failed!!! Create new transaction.");
         }
 
         if (!debitTx.getAccount().getCustomer().getEmail().equals(email)) {
@@ -354,14 +369,10 @@ public class TransactionServiceImpl implements TransactionService {
 
         otpService.verifyOtp(email, dto.getTransactionId(), dto.getOTP());
 
-        Account sender = accountRepository.lockAccountById(
-                debitTx.getAccount().getAccountId()
-        );
+        Account sender = accountRepository.lockAccountById(debitTx.getAccount().getAccountId());
 
         if (sender.getAmount().compareTo(debitTx.getAmount()) < 0) {
-            throw new InsufficientBalanceException(
-                    "Insufficient balance at confirmation"
-            );
+            throw new InsufficientBalanceException("Insufficient balance at confirmation");
         }
 
         sender.setAmount(sender.getAmount().subtract(debitTx.getAmount()));
@@ -377,25 +388,56 @@ public class TransactionServiceImpl implements TransactionService {
         if (debitTx.getOperationType() == OperationType.TRANSFER) {
 
             Account receiver = accountRepository.lockByAccountNum(debitTx.getCounterpartyAccountNum());
-
             receiver.setAmount(receiver.getAmount().add(debitTx.getAmount()));
 
-            Transaction creditTx =
-                    toEntityForTransferCredit(
-                            new TransferRequestDTO(
-                                    debitTx.getCounterpartyAccountNum(),
-                                    debitTx.getAccountNum(),
-                                    debitTx.getAmount()
-                            ),
-                            receiver,
-                            debitTx.getTransactionReferenceId()
-                    );
+            Transaction creditTx = toEntityForTransferCredit(
+                    new TransferRequestDTO(
+                            debitTx.getCounterpartyAccountNum(),
+                            debitTx.getAccountNum(),
+                            debitTx.getAmount()
+                    ),
+                    receiver,
+                    debitTx.getTransactionReferenceId()
+            );
 
             accountRepository.save(receiver);
             transactionRepository.save(creditTx);
 
+            eventPublisher.publishEvent(new TransactionEvent(
+                    dto.getTransactionId(),
+                    email,
+                    debitTx.getAmount(),
+                    OperationType.TRANSFER,
+                    TransactionType.DEBIT,
+                    TransactionStatus.SUCCESS,
+                    null
+            ));
+
+            eventPublisher.publishEvent(new TransactionEvent(
+                    creditTx.getTransactionId(),
+                    receiver.getCustomer().getEmail(),
+                    creditTx.getAmount(),
+                    OperationType.TRANSFER,
+                    TransactionType.CREDIT,
+                    TransactionStatus.SUCCESS,
+                    null
+            ));
+
             evictBalanceCache(receiver.getCustomer().getEmail(), receiver.getAccountNum());
+
+        } else if (debitTx.getOperationType() == OperationType.WITHDRAW) {
+
+            eventPublisher.publishEvent(new TransactionEvent(
+                    dto.getTransactionId(),
+                    email,
+                    debitTx.getAmount(),
+                    OperationType.WITHDRAW,
+                    TransactionType.DEBIT,
+                    TransactionStatus.SUCCESS,
+                    null
+            ));
         }
+
 
         return toDto(debitTx);
     }

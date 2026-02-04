@@ -25,7 +25,7 @@ public interface AccountRepository extends JpaRepository<Account, UUID> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT a FROM Account a WHERE a.accountNum = :accountNum AND a.customer.customerId = :customerId")
-    Account lockAccount(Long accountNum, UUID customerId);
+    Optional<Account> lockAccount(Long accountNum, UUID customerId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT a FROM Account a WHERE a.accountId = :id")

@@ -1,6 +1,8 @@
 package com.ritik.customer_microservice.exception;
 
+import com.ritik.customer_microservice.serviceImpl.TransactionFailureService;
 import jakarta.validation.ConstraintViolationException;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +20,10 @@ import java.util.Map;
 
 @Slf4j
 @RestControllerAdvice
+@RequiredArgsConstructor
 public class GlobalExceptionHandler {
+
+    private final TransactionFailureService transactionFailureService;
 
     @ExceptionHandler({
             CustomerNotFoundException.class,
@@ -67,6 +72,15 @@ public class GlobalExceptionHandler {
         log.warn("Access denied: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(new ErrorResponse(ex.getMessage(),"FORBIDDEN", 403));
+    }
+
+    @ExceptionHandler(OtpAttemptsExceededException.class)
+    public ResponseEntity<ErrorResponse> handleOtpFailure(OtpAttemptsExceededException ex) {
+
+        transactionFailureService.failTransactionDueToOtp(ex.getTransactionId(), ex.getEmail());
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(ex.getMessage(), "BAD_REQUEST", 400));
     }
 
     @ExceptionHandler(ServiceUnavailableException.class)
@@ -150,6 +164,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(TransactionAlreadyProcessedException.class)
     public ResponseEntity<ErrorResponse> handleTransactionAlreadyProcessed(TransactionAlreadyProcessedException ex){
         log.warn("Transaction already processed: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(ex.getMessage(),"CONFLICT", 409));
+    }
+
+    @ExceptionHandler(TransactionFailedException.class)
+    public ResponseEntity<ErrorResponse> handleTransactionFailed(TransactionFailedException ex){
+        log.warn("Transaction failed: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse(ex.getMessage(),"CONFLICT", 409));
     }

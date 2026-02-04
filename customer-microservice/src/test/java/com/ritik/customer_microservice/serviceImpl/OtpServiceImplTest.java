@@ -1,6 +1,7 @@
 package com.ritik.customer_microservice.serviceImpl;
 
 import com.ritik.customer_microservice.exception.BadRequestException;
+import com.ritik.customer_microservice.exception.OtpAttemptsExceededException;
 import com.ritik.customer_microservice.model.OtpVerification;
 import com.ritik.customer_microservice.repository.OtpRepository;
 import com.ritik.customer_microservice.service.EmailService;
@@ -26,6 +27,10 @@ class OtpServiceImplTest {
     @Mock
     private EmailService emailService;
 
+    @Mock
+    private OtpAttemptService otpAttemptService;
+
+
     @InjectMocks
     private OtpServiceImpl otpService;
 
@@ -43,7 +48,7 @@ class OtpServiceImplTest {
         verification.setEmail(email);
         verification.setOtp("1234");
         verification.setVerified(false);
-        verification.setAttemptCount((byte) 0);
+        verification.setAttemptCount(0);
         verification.setExpiryTime(LocalDateTime.now().plusMinutes(5));
     }
 
@@ -115,35 +120,33 @@ class OtpServiceImplTest {
 
         Assertions.assertEquals("OTP expired. Transaction failed.", ex.getMessage());
 
-        Mockito.verify(otpRepository).delete(verification);
+        Mockito.verify(otpAttemptService).deleteOtp(verification);
     }
 
     @Test
     void shouldThrowExceptionWhenTooManyAttempts() {
         // Arrange
-        verification.setAttemptCount((byte) 3);
+        verification.setAttemptCount(3);
 
         Mockito.when(otpRepository.findByEmailAndTransactionIdAndVerifiedFalse(email, transactionId))
                 .thenReturn(Optional.of(verification));
 
         // Act + Assert
-        BadRequestException ex = Assertions.assertThrows(BadRequestException.class,
+        OtpAttemptsExceededException ex = Assertions.assertThrows(OtpAttemptsExceededException.class,
                 () -> otpService.verifyOtp(email, transactionId, "1234"));
 
         Assertions.assertEquals("Too many invalid attempts. OTP invalidated.", ex.getMessage());
 
-        Mockito.verify(otpRepository).delete(verification);
+        Mockito.verify(otpAttemptService).deleteOtp(verification);
     }
 
     @Test
     void shouldIncrementAttemptCountWhenOtpInvalid() {
         // Arrange
+        verification.setAttemptCount(1);
         Mockito.when(otpRepository
                         .findByEmailAndTransactionIdAndVerifiedFalse(email, transactionId))
                 .thenReturn(Optional.of(verification));
-
-        Mockito.when(otpRepository.save(Mockito.any(OtpVerification.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
 
         // Act + Assert
         BadRequestException ex = Assertions.assertThrows(
@@ -152,7 +155,7 @@ class OtpServiceImplTest {
         Assertions.assertEquals("Invalid OTP", ex.getMessage());
         Assertions.assertEquals(1, verification.getAttemptCount());
 
-        Mockito.verify(otpRepository).save(verification);
+        Mockito.verify(otpAttemptService).incrementAttempt(verification);
     }
 
 

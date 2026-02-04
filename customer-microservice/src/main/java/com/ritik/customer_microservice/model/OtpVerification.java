@@ -34,7 +34,7 @@ public class OtpVerification {
     private LocalDateTime expiryTime;
 
     @Column(name="attempt_count",nullable = false)
-    private byte attemptCount;
+    private int attemptCount;
 
     @Column(name = "verified", nullable = false)
     private boolean verified;

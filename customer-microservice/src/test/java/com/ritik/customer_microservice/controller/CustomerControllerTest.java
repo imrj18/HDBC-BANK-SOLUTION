@@ -7,6 +7,7 @@ import com.ritik.customer_microservice.config.WithMockCustomer;
 import com.ritik.customer_microservice.controller.CustomerController;
 import com.ritik.customer_microservice.dto.customerDTO.*;
 import com.ritik.customer_microservice.service.CustomerService;
+import com.ritik.customer_microservice.serviceImpl.TransactionFailureService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -37,6 +38,10 @@ class CustomerControllerTest {
 
     @MockBean
     private JwtFilter jwtFilter;
+
+    @MockBean
+    private TransactionFailureService transactionFailureService;
+
 
     @Autowired
     private ObjectMapper objectMapper;

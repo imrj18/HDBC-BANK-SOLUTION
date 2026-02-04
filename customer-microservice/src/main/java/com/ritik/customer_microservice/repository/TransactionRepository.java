@@ -25,6 +25,6 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     Optional<Transaction> findByTransactionId(UUID transactionId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT t FROM Transaction t WHERE t.account.accountId = :id")
+    @Query("SELECT t FROM Transaction t WHERE t.transactionId = :id")
     Optional<Transaction> lockByTransactionId(@Param("id") UUID id);
 }

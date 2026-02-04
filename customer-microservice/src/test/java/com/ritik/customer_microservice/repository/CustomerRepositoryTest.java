@@ -4,7 +4,6 @@ import com.ritik.customer_microservice.enums.AccountType;
 import com.ritik.customer_microservice.enums.Status;
 import com.ritik.customer_microservice.model.Account;
 import com.ritik.customer_microservice.model.Customer;
-import com.ritik.customer_microservice.repository.CustomerRepository;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
