@@ -22,7 +22,7 @@ public interface CustomerSessionRepository extends JpaRepository<CustomerSession
     WHERE s.expiryTime < :now
     OR s.lastActivityTime < :inactiveCutoff
     """)
-    void deleteExpiredOrInactiveSessions(
+    int deleteExpiredOrInactiveSessions(
             @Param("now") LocalDateTime now,
             @Param("inactiveCutoff") LocalDateTime inactiveCutoff
     );

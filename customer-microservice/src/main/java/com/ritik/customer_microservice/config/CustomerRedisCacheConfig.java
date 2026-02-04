@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
@@ -19,11 +20,14 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @Configuration
 public class CustomerRedisCacheConfig {
 
     @Bean
     public RedisCacheManager cacheManager(RedisConnectionFactory factory) {
+
+        log.info("Initializing Redis Cache Manager");
 
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
@@ -34,6 +38,8 @@ public class CustomerRedisCacheConfig {
                 ObjectMapper.DefaultTyping.NON_FINAL,
                 JsonTypeInfo.As.PROPERTY
         );
+
+        log.debug("Configured ObjectMapper for Redis cache serialization");
 
         GenericJackson2JsonRedisSerializer serializer =
                 new GenericJackson2JsonRedisSerializer(objectMapper);
@@ -58,10 +64,15 @@ public class CustomerRedisCacheConfig {
         configs.put("accountInfo", defaultConfig.entryTtl(Duration.ofMinutes(3)));
         configs.put("transactionHistory", defaultConfig.entryTtl(Duration.ofMinutes(30)));
 
-        return RedisCacheManager.builder(factory)
+        log.info("Configured Redis caches | customerProfile=10m | bankCustomers=2m | checkBalance=3m | accountInfo=3m | transactionHistory=30m");
+
+        RedisCacheManager cacheManager = RedisCacheManager.builder(factory)
                 .cacheDefaults(defaultConfig)
                 .withInitialCacheConfigurations(configs)
                 .build();
+
+        log.info("Redis Cache Manager initialized successfully");
+
+        return cacheManager;
     }
 }
-

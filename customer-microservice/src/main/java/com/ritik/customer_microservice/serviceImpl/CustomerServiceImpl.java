@@ -12,6 +12,7 @@ import com.ritik.customer_microservice.repository.CustomerRepository;
 import com.ritik.customer_microservice.repository.CustomerSessionRepository;
 import com.ritik.customer_microservice.service.CustomerService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
@@ -30,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CustomerServiceImpl implements CustomerService {
@@ -79,16 +81,20 @@ public class CustomerServiceImpl implements CustomerService {
 
     @Override
     public CustomerResponseDTO register(CustomerRegisterDTO registerDTO) {
+        log.info("Customer registration request received | email={}", registerDTO.getEmail());
 
         if (customerRepository.existsByEmail(registerDTO.getEmail())) {
+            log.warn("Customer registration failed | reason=EMAIL_EXISTS | email={}", registerDTO.getEmail());
             throw new CustomerAlreadyExistsException("Email already exists");
         }
 
         if (customerRepository.existsByAadhar(registerDTO.getAadhar())) {
+            log.warn("Customer registration failed | reason=AADHAAR_EXISTS | email={}", registerDTO.getEmail());
             throw new CustomerAlreadyExistsException("Aadhaar already exists");
         }
 
         if (customerRepository.existsByPhone(registerDTO.getPhone())) {
+            log.warn("Customer registration failed | reason=PHONE_EXISTS | email={}", registerDTO.getEmail());
             throw new CustomerAlreadyExistsException("Phone already exists");
         }
 
@@ -96,24 +102,40 @@ public class CustomerServiceImpl implements CustomerService {
 
 
         Customer savedCustomer = customerRepository.save(customer);
+        log.info("Customer registered successfully | customerId={} | email={}",
+                savedCustomer.getCustomerId(),
+                savedCustomer.getEmail());
         return toResponseDto(savedCustomer);
     }
 
     @Override
     public AuthResponseDTO verify(CustomerLoginDTO dto) {
+        log.info("Login attempt received | email={}", dto.getEmail());
 
         Customer customer = customerRepository.findByEmail(dto.getEmail())
-                .orElseThrow(() -> new CustomerNotFoundException("Customer not found with given email"));
-
+                .orElseThrow(() -> {
+                    log.warn("Login failed | reason=CUSTOMER_NOT_FOUND | email={}", dto.getEmail());
+                    return new CustomerNotFoundException("Customer not found with given email");
+                });
         if (!passwordEncoder.matches(dto.getPassword(), customer.getPasswordHash())) {
+            log.warn("Login failed | reason=WRONG_PASSWORD | email={}", dto.getEmail());
             throw new WrongPasswordException("Invalid password");
         }
 
         customerSessionRepository.findById(customer.getCustomerId())
                 .ifPresent(session -> {
                     if (session.getExpiryTime().isAfter(LocalDateTime.now())) {
+                        log.warn(
+                                "Login blocked | reason=ALREADY_LOGGED_IN | email={} | sessionExpiry={}",
+                                dto.getEmail(),
+                                session.getExpiryTime()
+                        );
                         throw new AlreadyLoggedInException("Customer already has an active session");
                     } else {
+                        log.info("Expired session found, deleting | email={} | expiredAt={}",
+                                dto.getEmail(),
+                                session.getExpiryTime()
+                        );
                         customerSessionRepository.delete(session);
                     }
                 });
@@ -133,6 +155,13 @@ public class CustomerServiceImpl implements CustomerService {
 
         customerSessionRepository.save(session);
 
+        log.info(
+                "Login successful | email={} | customerId={} | tokenExpiresIn={}s",
+                dto.getEmail(),
+                customer.getCustomerId(),
+                session.getExpiryTime()
+        );
+
         return new AuthResponseDTO(
                 token,
                 "Bearer",
@@ -147,8 +176,12 @@ public class CustomerServiceImpl implements CustomerService {
             unless = "#result == null"
     )
     public CustomerResponseDTO viewProfile(String email) {
-        Customer customer = customerRepository.findByEmail(email).orElseThrow(() ->
-                new CustomerNotFoundException("Customer not found."));
+        log.info("View profile request | email={}", email);
+        Customer customer = customerRepository.findByEmail(email).orElseThrow(() -> {
+            log.warn("View profile failed | reason=CUSTOMER_NOT_FOUND | email={}", email);
+            return new CustomerNotFoundException("Customer not found.");
+        });
+        log.debug("Customer profile fetched from DB | email={}", email);
         return toResponseDto(customer);
     }
 
@@ -165,15 +198,24 @@ public class CustomerServiceImpl implements CustomerService {
     })
 
     public CustomerResponseDTO updateProfile(String email, CustomerUpdateDTO updateDTO) {
-        Customer customer = customerRepository.findByEmail(email).orElseThrow(() ->
-                new CustomerNotFoundException("Customer not found."));
+        log.info("Update profile request | email={}", email);
+        Customer customer = customerRepository.findByEmail(email).orElseThrow(() -> {
+            log.warn("Update profile failed | reason=CUSTOMER_NOT_FOUND | email={}", email);
+            return new CustomerNotFoundException("Customer not found.");
+        });
         if(customerRepository.existsByPhone(updateDTO.getPhone())){
+            log.warn("Update profile failed | reason=PHONE_ALREADY_EXISTS | email={}", email);
             throw new CustomerAlreadyExistsException("Phone number already exists!");
         }
         customer.setName(updateDTO.getName());
         customer.setPhone(updateDTO.getPhone());
         customer.setAddress(updateDTO.getAddress());
         customerRepository.save(customer);
+        log.info(
+                "Profile updated successfully | customerId={} | email={} | cacheEvicted=[customerProfile, bankCustomers]",
+                customer.getCustomerId(),
+                email
+        );
         return toResponseDto(customer);
     }
 
@@ -190,6 +232,15 @@ public class CustomerServiceImpl implements CustomerService {
             int page,
             int size) {
 
+        log.info(
+                "Fetch customers by balance request | bankId={} | minBalance={} | maxBalance={} | page={} | size={}",
+                bankId,
+                minBalance,
+                maxBalance,
+                page,
+                size
+        );
+
         Pageable pageable = PageRequest.of(
                 page,
                 size,
@@ -200,8 +251,20 @@ public class CustomerServiceImpl implements CustomerService {
                 .findCustomersByBankIdAndBalance(bankId, minBalance, maxBalance,pageable);
 
         if (results.isEmpty()) {
+            log.warn(
+                    "No customers found | bankId={} | minBalance={} | maxBalance={}",
+                    bankId,
+                    minBalance,
+                    maxBalance
+            );
             throw new CustomerNotFoundException("No customers found");
         }
+        log.debug(
+                "Customers fetched from DB | bankId={} | totalElements={} | totalPages={}",
+                bankId,
+                results.getTotalElements(),
+                results.getTotalPages()
+        );
 
         List<CustomerBalanceDTO> data = new ArrayList<>();
 
@@ -216,6 +279,14 @@ public class CustomerServiceImpl implements CustomerService {
                     balance
             ));
         }
+
+        log.info(
+                "Fetch customers by balance successful | bankId={} | returnedCount={} | page={} | isLast={}",
+                bankId,
+                data.size(),
+                results.getNumber(),
+                results.isLast()
+        );
 
         return new PageResponse<>(
                 data,

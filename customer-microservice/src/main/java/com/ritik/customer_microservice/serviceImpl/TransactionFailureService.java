@@ -6,6 +6,7 @@ import com.ritik.customer_microservice.exception.TransactionNotFoundException;
 import com.ritik.customer_microservice.model.Transaction;
 import com.ritik.customer_microservice.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TransactionFailureService {
@@ -22,13 +24,23 @@ public class TransactionFailureService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void failTransactionDueToOtp(UUID transactionId, String email) {
+        log.warn("Failing transaction due to OTP attempts exceeded | transactionId={} | email={}",transactionId,email);
 
         Transaction tx = transactionRepository
                 .findByTransactionId(transactionId)
-                .orElseThrow(() -> new TransactionNotFoundException("Transaction not found"));
-
+                .orElseThrow(() -> {
+                    log.error("Transaction not found while marking FAILED | transactionId={}", transactionId);
+                    return new TransactionNotFoundException("Transaction not found");
+                });
         tx.setTransactionStatus(TransactionStatus.FAILED);
         transactionRepository.save(tx);
+
+        log.info(
+                "Transaction marked as FAILED | transactionId={} | operation={} | amount={}",
+                transactionId,
+                tx.getOperationType(),
+                tx.getAmount()
+        );
 
         applicationEventPublisher.publishEvent(new TransactionEvent(
                 transactionId,
@@ -39,5 +51,8 @@ public class TransactionFailureService {
                 TransactionStatus.FAILED,
                 "OTP ATTEMPT EXCEEDED"
         ));
+
+
+        log.info("Failure transaction event published | transactionId={}", transactionId);
     }
 }

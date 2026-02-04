@@ -4,8 +4,10 @@ import com.ritik.customer_microservice.model.AccountNumberGenerator;
 import com.ritik.customer_microservice.repository.AccountNumberGeneratorRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class GenerateAccountNumber {
@@ -15,10 +17,19 @@ public class GenerateAccountNumber {
 
     @Transactional
     public Long generate(Long bankId) {
+        log.info("Generating account number | bankId={}", bankId);
 
         AccountNumberGenerator sequence = repository.save(new AccountNumberGenerator());
 
-        return bankId * MULTIPLIER + sequence.getId();
+        Long accountNumber = bankId * MULTIPLIER + sequence.getId();
+        log.debug(
+                "Account number generated | bankId={} | sequenceId={} | accountNumber={}",
+                bankId,
+                sequence.getId(),
+                accountNumber
+        );
+
+        return accountNumber;
     }
 }
 

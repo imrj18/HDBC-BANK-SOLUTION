@@ -14,6 +14,7 @@ import com.ritik.customer_microservice.repository.CustomerRepository;
 import com.ritik.customer_microservice.service.AccountService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AccountServiceImpl implements AccountService {
@@ -66,27 +68,33 @@ public class AccountServiceImpl implements AccountService {
     @Override
     @Transactional
     public AccountResponseDTO createAccount(String email, CreateAccountDTO dto) {
+        log.info("Create account request | email={} | ifsc={}", email, dto.getIfscCode());
 
         PageResponse<BankResponseDTO> banks;
 
         try {
             banks = bankClient.getBanks(dto.getIfscCode(), null);
+            log.debug("Bank service response received | ifsc={}", dto.getIfscCode());
         } catch (feign.FeignException.NotFound ex) {
+            log.warn("Invalid IFSC code | ifsc={}", dto.getIfscCode());
             throw new BankNotFoundException("Invalid IFSC code");
         } catch (feign.FeignException ex) {
-            throw new ServiceUnavailableException(
-                    "Bank service is currently unavailable. Please try again later"
-            );
+            log.error("Bank service unavailable | ifsc={}", dto.getIfscCode(), ex);
+            throw new ServiceUnavailableException("Bank service is currently unavailable. Please try again later");
         }
 
         if (banks == null || banks.getData().isEmpty()) {
+            log.warn("No bank found for IFSC | ifsc={}", dto.getIfscCode());
             throw new BankNotFoundException("Invalid IFSC code");
         }
 
         Long bankId = banks.getData().get(0).getBankId();
 
         Customer customer = customerRepository.findByEmail(email)
-                .orElseThrow(() -> new CustomerNotFoundException("Customer not found"));
+                .orElseThrow(() -> {
+                    log.warn("Customer not found | email={}", email);
+                    return new CustomerNotFoundException("Customer not found");
+                });
 
         // Optional: prevent duplicate account
         // if (accountRepository.existsByCustomerAndBankId(customer, bankId)) {
@@ -99,6 +107,13 @@ public class AccountServiceImpl implements AccountService {
 
         accountRepository.save(account);
 
+        log.info(
+                "Account created successfully | email={} | accountNum={} | bankId={}",
+                email,
+                account.getAccountNum(),
+                bankId
+        );
+
         return toResponseDto(account);
     }
 
@@ -109,11 +124,18 @@ public class AccountServiceImpl implements AccountService {
             unless = "#result == null"
     )
     public AccountBalanceDTO checkBalance(String email, Long accountNum){
-        Customer customer = customerRepository.findByEmail(email).orElseThrow(()->
-                new CustomerNotFoundException("Customer not found"));
+        log.info("Check balance request | email={} | accountNum={}", email, accountNum);
+        Customer customer = customerRepository.findByEmail(email).orElseThrow(()->{
+            log.warn("Customer not found during balance check | email={}", email);
+            return new CustomerNotFoundException("Customer not found");
+        });
         Account account = accountRepository.findByAccountNumAndCustomer_CustomerId(accountNum,customer.getCustomerId())
-                .orElseThrow(()->new AccountNotFoundException("Account not found"));
+                .orElseThrow(() -> {
+                    log.warn("Account not found during balance check | email={} | accountNum={}", email, accountNum);
+                    return new AccountNotFoundException("Account not found");
+                });
 
+        log.debug("Balance fetched | accountNum={} | balance={}", accountNum, account.getAmount());
         AccountBalanceDTO dto = new AccountBalanceDTO();
         dto.setAccountNumber(account.getAccountNum());
         dto.setAccountBalance(account.getAmount());
@@ -127,30 +149,36 @@ public class AccountServiceImpl implements AccountService {
             unless = "#result == null"
     )
     public PageResponse<AccountResponseDTO> getAccountInfo(String email, Long accountNum) {
-
+        log.info("Get account info request | email={} | accountNum={}", email, accountNum);
         Customer customer = customerRepository.findByEmail(email)
-                .orElseThrow(() -> new CustomerNotFoundException("Customer not found"));
-
+                .orElseThrow(() -> {
+                    log.warn("Customer not found during account info fetch | email={}", email);
+                    return new CustomerNotFoundException("Customer not found");
+                });
         List<AccountResponseDTO> responseList = new ArrayList<>();
 
         if (accountNum == null) {
-            List<Account> accounts =
-                    accountRepository.findByCustomer_CustomerId(customer.getCustomerId());
+            List<Account> accounts = accountRepository.findByCustomer_CustomerId(customer.getCustomerId());
 
             if (accounts.isEmpty()) {
+                log.warn("No accounts found | email={}", email);
                 throw new AccountNotFoundException("Account not found.");
             }
 
             for (Account account : accounts) {
                 responseList.add(toResponseDto(account));
             }
+            log.info("Fetched all accounts | email={} | count={}", email, responseList.size());
 
         } else {
             Account account = accountRepository
                     .findByAccountNumAndCustomer_CustomerId(accountNum, customer.getCustomerId())
-                    .orElseThrow(() -> new AccountNotFoundException("Account not found"));
-
+                    .orElseThrow(() -> {
+                        log.warn("Account not found | email={} | accountNum={}", email, accountNum);
+                        return new AccountNotFoundException("Account not found");
+                    });
             responseList.add(toResponseDto(account));
+            log.info("Fetched account info | email={} | accountNum={}", email, accountNum);
         }
 
         return new PageResponse<>(
