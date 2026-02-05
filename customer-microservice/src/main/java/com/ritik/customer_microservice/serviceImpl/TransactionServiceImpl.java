@@ -18,6 +18,7 @@ import com.ritik.customer_microservice.wrapper.PageResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.ModelMapper;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
@@ -52,6 +53,8 @@ public class TransactionServiceImpl implements TransactionService {
 
     private final ApplicationEventPublisher eventPublisher;
 
+    private final ModelMapper modelMapper;
+
     private void evictBalanceCache(String email, Long accountNum) {
         Cache checkBalanceCache = cacheManager.getCache("checkBalance");
         if (checkBalanceCache != null) {
@@ -64,18 +67,15 @@ public class TransactionServiceImpl implements TransactionService {
         }
     }
 
-
     private Transaction toEntityForDeposit(DepositRequestDTO dto, Account account) {
+        Transaction transaction = modelMapper.map(dto, Transaction.class);
 
-        Transaction transaction = new Transaction();
         transaction.setAccount(account);
         transaction.setAccountNum(account.getAccountNum());
         transaction.setBankId(account.getBankId());
 
         transaction.setOperationType(OperationType.DEPOSIT);
         transaction.setTransactionType(TransactionType.CREDIT);
-
-        transaction.setAmount(dto.getAmount());
         transaction.setClosingBalance(account.getAmount());
         transaction.setTransactionStatus(TransactionStatus.SUCCESS);
 
@@ -85,18 +85,15 @@ public class TransactionServiceImpl implements TransactionService {
         return transaction;
     }
 
-
     private Transaction toEntityForWithdraw(WithdrawRequestDTO dto, Account account) {
+        Transaction transaction = modelMapper.map(dto, Transaction.class);
 
-        Transaction transaction = new Transaction();
         transaction.setAccount(account);
         transaction.setAccountNum(account.getAccountNum());
         transaction.setBankId(account.getBankId());
 
         transaction.setOperationType(OperationType.WITHDRAW);
         transaction.setTransactionType(TransactionType.DEBIT);
-
-        transaction.setAmount(dto.getAmount());
         transaction.setTransactionStatus(TransactionStatus.PENDING);
 
         transaction.setTransactionReferenceId(null);
@@ -105,47 +102,17 @@ public class TransactionServiceImpl implements TransactionService {
         return transaction;
     }
 
-    private TransactionResponseDTO toDto(Transaction transaction) {
-        TransactionResponseDTO dto = new TransactionResponseDTO();
-        dto.setTransactionId(transaction.getTransactionId());
-        dto.setAccountNum(transaction.getAccountNum());
-        dto.setOperationType(transaction.getOperationType());
-        dto.setTransactionType(transaction.getTransactionType());
-        dto.setAmount(transaction.getAmount());
-        dto.setClosingBalance(transaction.getClosingBalance());
-        dto.setTransactionStatus(transaction.getTransactionStatus());
-        dto.setCreatedAt(transaction.getCreatedAt());
-        return dto;
-    }
-
-    private TransactionHistoryDTO toTransactionHistoryDto(Transaction transaction) {
-
-        TransactionHistoryDTO dto = new TransactionHistoryDTO();
-
-        dto.setTransactionId(transaction.getTransactionId());
-        dto.setOperationType(transaction.getOperationType());
-        dto.setTransactionType(transaction.getTransactionType());
-        dto.setAmount(transaction.getAmount());
-        dto.setClosingBalance(transaction.getClosingBalance());
-        dto.setTransactionStatus(transaction.getTransactionStatus());
-        dto.setCreatedAt(transaction.getCreatedAt());
-
-        return dto;
-    }
-
     private Transaction toEntityForTransferDebit(TransferRequestDTO dto, Account sender, UUID transactionRefId) {
+        Transaction transaction = modelMapper.map(dto, Transaction.class);
 
-        Transaction transaction = new Transaction();
         transaction.setAccount(sender);
         transaction.setAccountNum(sender.getAccountNum());
         transaction.setBankId(sender.getBankId());
 
         transaction.setOperationType(OperationType.TRANSFER);
         transaction.setTransactionType(TransactionType.DEBIT);
-
-        transaction.setAmount(dto.getAmount());
-        transaction.setClosingBalance(null);
         transaction.setTransactionStatus(TransactionStatus.PENDING);
+        transaction.setClosingBalance(null);
 
         transaction.setTransactionReferenceId(transactionRefId);
         transaction.setCounterpartyAccountNum(dto.getToAccountNum());
@@ -154,23 +121,29 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     private Transaction toEntityForTransferCredit(TransferRequestDTO dto, Account receiver, UUID transactionRefId) {
+        Transaction transaction = modelMapper.map(dto, Transaction.class);
 
-        Transaction transaction = new Transaction();
         transaction.setAccount(receiver);
         transaction.setAccountNum(receiver.getAccountNum());
         transaction.setBankId(receiver.getBankId());
 
         transaction.setOperationType(OperationType.TRANSFER);
         transaction.setTransactionType(TransactionType.CREDIT);
-
-        transaction.setAmount(dto.getAmount());
-        transaction.setClosingBalance(receiver.getAmount());
         transaction.setTransactionStatus(TransactionStatus.SUCCESS);
+        transaction.setClosingBalance(receiver.getAmount());
 
         transaction.setTransactionReferenceId(transactionRefId);
         transaction.setCounterpartyAccountNum(dto.getFromAccountNum());
 
         return transaction;
+    }
+
+    private TransactionResponseDTO toDto(Transaction transaction) {
+        return modelMapper.map(transaction, TransactionResponseDTO.class);
+    }
+
+    private TransactionHistoryDTO toTransactionHistoryDto(Transaction transaction) {
+        return modelMapper.map(transaction, TransactionHistoryDTO.class);
     }
 
     private Customer checkCustomer(String email){

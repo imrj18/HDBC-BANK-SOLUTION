@@ -16,6 +16,7 @@ import com.ritik.customer_microservice.wrapper.PageResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.ModelMapper;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -39,19 +40,10 @@ public class AccountServiceImpl implements AccountService {
 
     private final BankClient bankClient;
 
+    private final ModelMapper modelMapper;
+
     private AccountResponseDTO toResponseDto(Account account) {
-
-        AccountResponseDTO dto = new AccountResponseDTO();
-
-        dto.setAccountNum(account.getAccountNum());
-        dto.setBankId(account.getBankId());
-        dto.setAccountType(account.getAccountType());
-        dto.setAccountStatus(account.getAccountStatus());
-
-        dto.setCreatedAt(account.getCreatedAt());
-        dto.setUpdatedAt(account.getUpdatedAt());
-
-        return dto;
+        return modelMapper.map(account, AccountResponseDTO.class);
     }
 
     private Account toEntity(CreateAccountDTO dto, Long bankId) {

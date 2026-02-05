@@ -14,6 +14,7 @@ import com.ritik.customer_microservice.service.CustomerService;
 import com.ritik.customer_microservice.wrapper.PageResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.ModelMapper;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
@@ -45,38 +46,17 @@ public class CustomerServiceImpl implements CustomerService {
 
     private final CustomerSessionRepository customerSessionRepository;
 
-    private static CustomerResponseDTO toResponseDto(Customer customer) {
+    private final ModelMapper modelMapper;
 
-        CustomerResponseDTO dto = new CustomerResponseDTO();
-
-        dto.setName(customer.getName());
-        dto.setEmail(customer.getEmail());
-        dto.setPhone(customer.getPhone());
-        dto.setAddress(customer.getAddress());
-        dto.setAadhar(customer.getAadhar());
-
-        dto.setBankStatus(customer.getStatus().name());
-        dto.setCreatedAt(customer.getCreatedAt());
-        dto.setUpdatedAt(customer.getUpdatedAt());
-
-        return dto;
+    private CustomerResponseDTO toResponseDto(Customer customer) {
+        return modelMapper.map(customer, CustomerResponseDTO.class);
     }
 
+
     private Customer toEntity(CustomerRegisterDTO dto) {
-        Customer customer = new Customer();
-
-        customer.setName(dto.getName());
-        customer.setEmail(dto.getEmail());
-        customer.setPhone(dto.getPhone());
-        customer.setAddress(dto.getAddress());
-        customer.setAadhar(dto.getAadhar());
-
-        customer.setPasswordHash(
-                passwordEncoder.encode(dto.getPassword())
-        );
-
+        Customer customer = modelMapper.map(dto, Customer.class);
+        customer.setPasswordHash(passwordEncoder.encode(dto.getPassword()));
         customer.setStatus(Status.ACTIVE);
-
         return customer;
     }
 
