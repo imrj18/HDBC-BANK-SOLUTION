@@ -15,7 +15,7 @@ public class CustomerResponseDTO {
     private String address;
     private String aadhar;
 
-    private Status bankStatus;
+    private Status customerStatus;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

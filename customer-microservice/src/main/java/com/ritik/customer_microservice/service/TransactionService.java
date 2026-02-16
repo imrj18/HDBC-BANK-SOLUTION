@@ -12,5 +12,5 @@ public interface TransactionService {
 
     TransferResponseDTO transferMoney(String email, TransferRequestDTO transferRequestDTO);
 
-    TransactionResponseDTO transactionConfirm(String email, ConfirmRequestDTO dto);
+    TransactionResponseDTO transactionConfirm(String email, ConfirmRequestDTO dto) throws InterruptedException;
 }

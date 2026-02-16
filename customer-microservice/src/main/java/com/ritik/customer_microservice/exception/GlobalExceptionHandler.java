@@ -4,6 +4,7 @@ import com.ritik.customer_microservice.serviceImpl.TransactionFailureService;
 import jakarta.validation.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -173,6 +174,21 @@ public class GlobalExceptionHandler {
         log.warn("Transaction failed: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse(ex.getMessage(),"CONFLICT", 409));
+    }
+
+    @ExceptionHandler(PessimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handlePessimisticLock(
+            PessimisticLockingFailureException ex) {
+
+        ErrorResponse error = new ErrorResponse(
+                "Transaction is already being processed. Please try again later.",
+                "TRANSACTION_IN_PROGRESS",
+                409
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(error);
     }
 
     @ExceptionHandler(Exception.class)

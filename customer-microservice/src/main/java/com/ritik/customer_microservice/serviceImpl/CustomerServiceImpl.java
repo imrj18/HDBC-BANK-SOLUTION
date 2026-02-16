@@ -49,7 +49,9 @@ public class CustomerServiceImpl implements CustomerService {
     private final ModelMapper modelMapper;
 
     private CustomerResponseDTO toResponseDto(Customer customer) {
-        return modelMapper.map(customer, CustomerResponseDTO.class);
+        CustomerResponseDTO responseDTO = modelMapper.map(customer, CustomerResponseDTO.class);
+        responseDTO.setCustomerStatus(Status.ACTIVE);
+        return responseDTO;
     }
 
 

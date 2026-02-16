@@ -5,10 +5,12 @@ import jakarta.persistence.LockModeType;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -34,5 +36,27 @@ public interface AccountRepository extends JpaRepository<Account, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT a FROM Account a WHERE a.accountNum = :accountNum")
     Account lockByAccountNum(@Param("accountNum") Long accountNum);
+
+    @Modifying
+    @Query("""
+    UPDATE Account a
+    SET a.amount = a.amount + :amount
+    WHERE a.accountNum = :accountNum
+    AND a.customer.customerId = :customerId
+""")
+    int deposit(@Param("accountNum") Long accountNum,
+                @Param("customerId") UUID customerId,
+                @Param("amount") BigDecimal amount);
+
+    @Modifying
+    @Query("""
+    UPDATE Account a
+    SET a.amount = a.amount - :amount
+    WHERE a.accountNum = :accountNum
+    AND a.customer.customerId = :customerId
+""")
+    int withdrawIfSufficient(@Param("accountNum")  UUID accountNum,
+                @Param("amount") BigDecimal amount);
+
 
 }
