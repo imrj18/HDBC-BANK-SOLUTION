@@ -1,0 +1,207 @@
+services:
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: no
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - hdbc-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    restart: no
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    ports:
+      - "2181:2181"
+    networks:
+      - hdbc-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    restart: no
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - hdbc-network
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: no
+    ports:
+      - "6379:6379"
+    networks:
+      - hdbc-network
+
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: zipkin
+    restart: no
+    ports:
+      - "9411:9411"
+    networks:
+      - hdbc-network
+
+  config-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        JAR_FILE: config-server/target/config-server-1.0.0.jar
+    container_name: config-server
+    restart: no
+    ports:
+      - "8888:8888"
+    environment:
+      GITHUB_ID: ${GITHUB_ID}
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      CONFIG_USERNAME: ${CONFIG_USERNAME}
+      CONFIG_PASSWORD: ${CONFIG_PASSWORD}
+    networks:
+      - hdbc-network
+
+  service-registry:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        JAR_FILE: service-registry/target/service-registry-1.0.0.jar
+    container_name: service-registry
+    restart: no
+    ports:
+      - "8761:8761"
+    depends_on:
+      - config-server
+    networks:
+      - hdbc-network
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        JAR_FILE: api-gateway/target/api-gateway-1.0.0.jar
+    container_name: api-gateway
+    restart: no
+    ports:
+      - "8080:8080"
+    depends_on:
+      - service-registry
+      - config-server
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      SPRING_CLOUD_CONFIG_USERNAME: ${CONFIG_USERNAME}
+      SPRING_CLOUD_CONFIG_PASSWORD: ${CONFIG_PASSWORD}
+    networks:
+      - hdbc-network
+
+  bank-microservice:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        JAR_FILE: bank-microservice/target/bank-microservice-1.0.0.jar
+    container_name: bank-microservice
+    restart: no
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mysql
+      - service-registry
+      - config-server
+      - redis
+      - zipkin
+    environment:
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      SPRING_CLOUD_CONFIG_USERNAME: ${CONFIG_USERNAME}
+      SPRING_CLOUD_CONFIG_PASSWORD: ${CONFIG_PASSWORD}
+    networks:
+      - hdbc-network
+
+  notification-microservice:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        JAR_FILE: notification-microservice/target/notification-microservice-1.0.0.jar
+    container_name: notification-microservice
+    restart: unless-stopped
+    ports:
+      - "8085:8085"
+    depends_on:
+      - service-registry
+      - config-server
+      - zipkin
+      - kafka
+    environment:
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      SPRING_CLOUD_CONFIG_USERNAME: ${CONFIG_USERNAME}
+      SPRING_CLOUD_CONFIG_PASSWORD: ${CONFIG_PASSWORD}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      MAIL_ID: ${MAIL_ID}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+    networks:
+      - hdbc-network
+
+  customer-microservice:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        JAR_FILE: customer-microservice/target/customer-microservice-1.0.0.jar
+    container_name: customer-microservice
+    restart: no
+    ports:
+      - "8082:8082"
+    depends_on:
+      - mysql
+      - service-registry
+      - config-server
+      - redis
+      - kafka
+      - zipkin
+    environment:
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      MAIL_ID: ${MAIL_ID}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      SPRING_CLOUD_CONFIG_USERNAME: ${CONFIG_USERNAME}
+      SPRING_CLOUD_CONFIG_PASSWORD: ${CONFIG_PASSWORD}
+    networks:
+      - hdbc-network
+
+networks:
+  hdbc-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
