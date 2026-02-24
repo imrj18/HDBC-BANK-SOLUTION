@@ -1,10 +1,9 @@
-package com.ritik.customer_microservice.serviceImpl;
+package com.ritik.customer_microservice.service;
 
 import com.ritik.customer_microservice.exception.BadRequestException;
 import com.ritik.customer_microservice.exception.OtpAttemptsExceededException;
 import com.ritik.customer_microservice.model.OtpVerification;
 import com.ritik.customer_microservice.repository.OtpRepository;
-import com.ritik.customer_microservice.service.EmailService;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,14 +24,11 @@ class OtpServiceImplTest {
     private OtpRepository otpRepository;
 
     @Mock
-    private EmailService emailService;
-
-    @Mock
     private OtpAttemptService otpAttemptService;
 
 
     @InjectMocks
-    private OtpServiceImpl otpService;
+    private OtpService otpService;
 
     private UUID transactionId;
     private String email;
@@ -62,11 +58,11 @@ class OtpServiceImplTest {
         otpService.sendOtp(email, transactionId);
 
         Mockito.verify(otpRepository).save(Mockito.any(OtpVerification.class));
-        Mockito.verify(emailService).sendMail(
-                Mockito.eq(email),
-                Mockito.eq("OTP Verification"),
-                Mockito.contains("Your OTP is")
-        );
+//        Mockito.verify(emailService).sendMail(
+//                Mockito.eq(email),
+//                Mockito.eq("OTP Verification"),
+//                Mockito.contains("Your OTP is")
+//        );
     }
 
     @Test

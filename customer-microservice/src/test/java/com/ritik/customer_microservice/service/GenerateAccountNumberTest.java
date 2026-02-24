@@ -1,8 +1,7 @@
-package com.ritik.customer_microservice.serviceImpl;
+package com.ritik.customer_microservice.service;
 
 import com.ritik.customer_microservice.model.AccountNumberGenerator;
 import com.ritik.customer_microservice.repository.AccountNumberGeneratorRepository;
-import com.ritik.customer_microservice.serviceImpl.GenerateAccountNumber;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

@@ -1,4 +1,4 @@
-package com.ritik.customer_microservice.serviceImpl;
+package com.ritik.customer_microservice.service;
 
 import com.ritik.customer_microservice.model.AccountNumberGenerator;
 import com.ritik.customer_microservice.repository.AccountNumberGeneratorRepository;

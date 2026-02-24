@@ -1,4 +1,4 @@
-package com.ritik.customer_microservice.serviceImpl;
+package com.ritik.customer_microservice.service;
 
 import com.ritik.customer_microservice.dto.transactionDTO.*;
 import com.ritik.customer_microservice.enums.OperationType;
@@ -42,10 +42,10 @@ class TransactionServiceImplTest {
     private TransactionRepository transactionRepository;
 
     @InjectMocks
-    private TransactionServiceImpl transactionService;
+    private TransactionService transactionService;
 
     @Mock
-    private OtpServiceImpl otpService;
+    private OtpService otpService;
 
     @Mock
     private CacheManager cacheManager;

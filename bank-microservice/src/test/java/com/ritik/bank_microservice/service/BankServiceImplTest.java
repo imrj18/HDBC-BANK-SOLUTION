@@ -1,4 +1,4 @@
-package com.ritik.bank_microservice.serviceImpl;
+package com.ritik.bank_microservice.service;
 
 
 import com.ritik.bank_microservice.dto.BankRequestDTO;
@@ -38,7 +38,7 @@ class BankServiceImplTest {
     private CustomerClient customerClient;
 
     @InjectMocks
-    private BankServiceImpl service;
+    private BankService service;
 
     private Bank savedEntity;
     private BankRequestDTO dto;

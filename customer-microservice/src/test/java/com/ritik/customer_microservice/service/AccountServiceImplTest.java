@@ -1,4 +1,4 @@
-package com.ritik.customer_microservice.serviceImpl;
+package com.ritik.customer_microservice.service;
 
 import com.ritik.customer_microservice.dto.accountDTO.AccountBalanceDTO;
 import com.ritik.customer_microservice.dto.accountDTO.AccountResponseDTO;
@@ -48,7 +48,7 @@ class AccountServiceImplTest {
 
 
     @InjectMocks
-    private AccountServiceImpl accountService;
+    private AccountService accountService;
 
     private CreateAccountDTO createAccountDTO;
     private Customer customer;

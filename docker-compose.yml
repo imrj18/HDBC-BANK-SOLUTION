@@ -76,7 +76,7 @@ services:
       - "8888:8888"
     environment:
       GITHUB_ID: ${GITHUB_ID}
-      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      GITHUB_NEW_TOKEN: ${GITHUB_NEW_TOKEN}
       CONFIG_USERNAME: ${CONFIG_USERNAME}
       CONFIG_PASSWORD: ${CONFIG_PASSWORD}
     networks:

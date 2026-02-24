@@ -6,7 +6,7 @@ import com.ritik.customer_microservice.config.MethodSecurityConfig;
 import com.ritik.customer_microservice.dto.customerDTO.CustomerBalanceDTO;
 import com.ritik.customer_microservice.service.CustomerService;
 import com.ritik.customer_microservice.wrapper.PageResponse;
-import com.ritik.customer_microservice.serviceImpl.TransactionFailureService;
+import com.ritik.customer_microservice.service.TransactionFailureService;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;

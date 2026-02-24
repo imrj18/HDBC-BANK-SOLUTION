@@ -1,4 +1,4 @@
-package com.ritik.customer_microservice.serviceImpl;
+package com.ritik.customer_microservice.service;
 
 import com.ritik.customer_microservice.dto.customerDTO.*;
 import com.ritik.customer_microservice.enums.Status;
@@ -41,10 +41,10 @@ class CustomerServiceImplTest {
     private PasswordEncoder passwordEncoder;
 
     @Mock
-    private JwtServiceImpl jwtService;
+    private JwtService jwtService;
 
     @InjectMocks
-    private CustomerServiceImpl customerService;
+    private CustomerService customerService;
 
     private CustomerRegisterDTO registerDTO;
     private CustomerLoginDTO loginDTO;

@@ -1,0 +1,18 @@
+[33ma30ebe1[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{0}: reset: moving to origin/main
+[33m80fc395[m HEAD@{1}: commit: feat: add Docker support and containerized microservice setup
+[33m867b4c9[m HEAD@{2}: reset: moving to HEAD~1
+[33m7e462f7[m HEAD@{3}: commit: feat: add Docker support and containerized microservice setup
+[33m867b4c9[m HEAD@{4}: reset: moving to HEAD~1
+[33m9e8940c[m HEAD@{5}: commit: feat: add Docker support and containerized microservice setup
+[33m867b4c9[m HEAD@{6}: commit: refactor: extract common-dto module and restructure inter-service communication
+[33m7c0d44b[m HEAD@{7}: commit: chore: remove IDE files and deprecated email/transaction components
+[33m5c39ec3[m HEAD@{8}: commit: Update confirmTransaction logic and improve locking strategy
+[33ma30ebe1[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{9}: commit: Update gitignore and logging configuration
+[33m709d2ad[m HEAD@{10}: commit: Add service unavailable exception and enhance global exception handling
+[33m29a90e4[m HEAD@{11}: commit: Enable file-based logging with Micrometer tracing and Zipkin
+[33m43d7e96[m HEAD@{12}: commit: Add ModelMapper configuration and refactor DTO mappings
+[33me41fde8[m HEAD@{13}: commit: refactor: reorganize PageResponse and update controllers, services, and tests
+[33m33f4793[m HEAD@{14}: commit: Add logs to services, schedulers, configs, filters, and transaction flows
+[33md864b3c[m HEAD@{15}: commit: test: improve customer service tests and add unit tests for OTP and transaction failures
+[33m218bc86[m HEAD@{16}: commit: Handle OTP failure flow and transaction status updates with Kafka integration
+[33m87616ec[m HEAD@{17}: clone: from https://github.com/imrj18/HDBC-BANK-SOLUTION.git

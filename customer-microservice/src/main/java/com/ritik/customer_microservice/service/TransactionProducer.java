@@ -1,4 +1,4 @@
-package com.ritik.customer_microservice.serviceImpl;
+package com.ritik.customer_microservice.service;
 
 import com.ritik.customer_microservice.dto.event.TransactionEvent;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +11,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-public class TransactionProducerImpl {
+public class TransactionProducer {
 
     private final KafkaTemplate<String, TransactionEvent> kafkaTemplate;
 

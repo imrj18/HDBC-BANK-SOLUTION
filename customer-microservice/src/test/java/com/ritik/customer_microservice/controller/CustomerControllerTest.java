@@ -4,10 +4,9 @@ package com.ritik.customer_microservice.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ritik.customer_microservice.config.JwtFilter;
 import com.ritik.customer_microservice.config.WithMockCustomer;
-import com.ritik.customer_microservice.controller.CustomerController;
 import com.ritik.customer_microservice.dto.customerDTO.*;
 import com.ritik.customer_microservice.service.CustomerService;
-import com.ritik.customer_microservice.serviceImpl.TransactionFailureService;
+import com.ritik.customer_microservice.service.TransactionFailureService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -18,9 +17,6 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 
 import org.springframework.test.web.servlet.MockMvc;
-
-import java.time.LocalDateTime;
-import java.util.UUID;
 
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;

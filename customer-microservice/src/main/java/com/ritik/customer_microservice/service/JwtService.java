@@ -1,4 +1,4 @@
-package com.ritik.customer_microservice.serviceImpl;
+package com.ritik.customer_microservice.service;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -9,16 +9,14 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
-import java.time.LocalDateTime;
 import java.util.Date;
-import java.util.function.Function;
 
 @Service
-public class JwtServiceImpl {
+public class JwtService {
 
     private final SecretKey userKey;
 
-    public JwtServiceImpl(@Value("${jwt.secret}") String userSecret) {
+    public JwtService(@Value("${jwt.secret}") String userSecret) {
         this.userKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(userSecret));
     }
 

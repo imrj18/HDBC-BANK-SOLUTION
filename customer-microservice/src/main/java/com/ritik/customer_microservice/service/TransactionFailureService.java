@@ -1,4 +1,4 @@
-package com.ritik.customer_microservice.serviceImpl;
+package com.ritik.customer_microservice.service;
 
 import com.ritik.customer_microservice.dto.event.TransactionEvent;
 import com.ritik.customer_microservice.enums.TransactionStatus;
