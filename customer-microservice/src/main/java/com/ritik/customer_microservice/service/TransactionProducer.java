@@ -1,6 +1,6 @@
 package com.ritik.customer_microservice.service;
 
-import com.ritik.customer_microservice.dto.event.TransactionEvent;
+import com.hdbc.dto.event.TransactionEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;

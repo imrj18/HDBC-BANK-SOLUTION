@@ -483,6 +483,7 @@ public class TransactionService {
 
         log.debug("Verifying OTP | txnId={} | email={}", debitTx.getTransactionId(), email);
         otpService.verifyOtp(email, dto.getTransactionId(), dto.getOTP());
+        Thread.sleep(20000);
 
         if (debitTx.getOperationType() == OperationType.WITHDRAW) {
             return confirmWithdraw(debitTx, email);

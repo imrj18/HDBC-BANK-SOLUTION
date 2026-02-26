@@ -2,7 +2,6 @@ package com.example.notification_microservice.service;
 
 import com.example.notification_microservice.enums.TransactionStatus;
 
-
 import com.hdbc.dto.event.TransactionEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -132,24 +131,24 @@ public class TransactionEmailTemplateService {
         );
 
         return """
-            Dear Customer,
+        Dear Customer,
 
-            We regret to inform you that your transaction has failed.
+        We regret to inform you that your transaction has failed.
 
-            Transaction Details:
-            ---------------------
-            Transaction ID : %s
-            Amount         : ₹%s
-            Operation      : %s
-            Status         : %s
-            Reason         : %s
+        Transaction Details:
+        ---------------------
+        Transaction ID : %s
+        Amount         : ₹%s
+        Operation      : %s
+        Status         : %s
+        Reason         : %s
 
-            If you did not initiate this transaction or need assistance,
-            please contact customer support immediately.
+        If you did not initiate this transaction or need assistance,
+        please contact customer support immediately.
 
-            Regards,
-            HDBC Bank
-            """.formatted(
+        Regards,
+        HDBC Bank
+        """.formatted(
                 event.getTransactionId(),
                 event.getAmount(),
                 event.getOperationType(),

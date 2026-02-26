@@ -53,9 +53,8 @@ public interface AccountRepository extends JpaRepository<Account, UUID> {
     UPDATE Account a
     SET a.amount = a.amount - :amount
     WHERE a.accountNum = :accountNum
-    AND a.customer.customerId = :customerId
 """)
-    int withdrawIfSufficient(@Param("accountNum")  UUID accountNum,
+    int withdrawIfSufficient(@Param("accountNum")  Long accountNum,
                 @Param("amount") BigDecimal amount);
 
 

@@ -15,10 +15,12 @@ import java.math.BigDecimal;
 public interface CustomerClient {
 
     @GetMapping("/internal/customers")
-    PageResponse<CustomerBalanceDTO> getCustomers(@RequestParam Long bankId,
-                                                  @RequestParam(required = false) BigDecimal minBalance,
-                                                  @RequestParam(required = false) BigDecimal maxBalance,
-                                                  @RequestParam(defaultValue = "0") int page,
-                                                  @RequestParam(defaultValue = "5") int size);
+    PageResponse<CustomerBalanceDTO> getCustomers(
+            @RequestParam("bankId") Long bankId,
+            @RequestParam(value = "minBalance", required = false) BigDecimal minBalance,
+            @RequestParam(value = "maxBalance", required = false) BigDecimal maxBalance,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "5") int size
+    );
 }
 

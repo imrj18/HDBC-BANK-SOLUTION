@@ -1,6 +1,6 @@
 package com.ritik.customer_microservice.service;
 
-import com.ritik.customer_microservice.dto.event.TransactionEvent;
+import com.hdbc.dto.event.TransactionEvent;
 import com.ritik.customer_microservice.enums.OperationType;
 import com.ritik.customer_microservice.enums.TransactionStatus;
 import com.ritik.customer_microservice.enums.TransactionType;

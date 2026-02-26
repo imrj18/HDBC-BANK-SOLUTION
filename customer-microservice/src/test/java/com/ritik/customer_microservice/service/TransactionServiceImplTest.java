@@ -703,7 +703,7 @@ class TransactionServiceImplTest {
     }  //-----------------------------------28
 
     @Test
-    void shouldConfirmWithdrawTransactionSuccessfully() {
+    void shouldConfirmWithdrawTransactionSuccessfully() throws InterruptedException {
         // Arrange
         senderAccount.setCustomer(customer);
         senderAccount.setAmount(BigDecimal.valueOf(5000));
@@ -797,7 +797,7 @@ class TransactionServiceImplTest {
     }
 
     @Test
-    void shouldConfirmTransferTransactionSuccessfully() {
+    void shouldConfirmTransferTransactionSuccessfully() throws InterruptedException {
         // Arrange
         senderAccount.setCustomer(customer);
         senderAccount.setAmount(BigDecimal.valueOf(5000));

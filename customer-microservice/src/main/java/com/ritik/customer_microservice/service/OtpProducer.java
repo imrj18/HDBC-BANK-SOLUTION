@@ -1,6 +1,5 @@
 package com.ritik.customer_microservice.service;
 
-
 import com.hdbc.dto.event.OtpEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

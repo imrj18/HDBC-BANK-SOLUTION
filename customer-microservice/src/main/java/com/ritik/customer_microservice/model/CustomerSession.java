@@ -12,6 +12,7 @@ import java.util.UUID;
 @Entity
 @Getter
 @Setter
+@Table(name = "customer_session")
 @NoArgsConstructor
 @AllArgsConstructor
 public class CustomerSession {

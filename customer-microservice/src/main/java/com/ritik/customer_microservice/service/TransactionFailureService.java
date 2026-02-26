@@ -1,6 +1,6 @@
 package com.ritik.customer_microservice.service;
 
-import com.ritik.customer_microservice.dto.event.TransactionEvent;
+import com.hdbc.dto.event.TransactionEvent;
 import com.ritik.customer_microservice.enums.TransactionStatus;
 import com.ritik.customer_microservice.exception.TransactionNotFoundException;
 import com.ritik.customer_microservice.model.Transaction;
@@ -46,9 +46,9 @@ public class TransactionFailureService {
                 transactionId,
                 email,
                 tx.getAmount(),
-                tx.getOperationType(),
-                tx.getTransactionType(),
-                TransactionStatus.FAILED,
+                tx.getOperationType().toString(),
+                tx.getTransactionType().toString(),
+                TransactionStatus.FAILED.toString(),
                 "OTP ATTEMPT EXCEEDED"
         ));
 
